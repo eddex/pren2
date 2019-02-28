@@ -3,7 +3,7 @@ The boardcomputer is a RaspberryPi 3 B+.
 
 ## project setup & usage
 **initial setup**
-1. create a virtual environment with python 3.6 in the `boardcomputer` folder, call it `venv`
+1. create a virtual environment with python 3.6 in the `boardcomputer` folder, call it `venv` (PyCharm: `Fle > Settings > Project: boardcomputer > Project Interpreter`)
 2. change to the environment in your (powershell) console: `.\venv\Scripts\activate`
 3. update pip: `easy_install -U pip`
 4. install requirements: `pip install -r requirements.txt`
@@ -19,11 +19,12 @@ if there are errors regarding your execution policy, run powershell as admin and
 - each component has its own directory.
 - add `__init__.py` for each component
 - each component must have a `tests` subdirectory for unit tests
-- the `tests` directories also need an `__init__.py file
+- the `tests` directories also need an `__init__.py` file
 
 ## testing
 - use `pytest` from the `boardcomputer` root directory to run all tests
-- test methods must start with `test_` other wise the tests are not found by pytest
+- file names for tests must start with `test_` otherwise the tests are not found by pytest
+- test methods must start with `test_` otherwise the tests are not found by pytest
 
 ## software components
 
