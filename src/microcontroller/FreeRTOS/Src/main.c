@@ -66,6 +66,7 @@
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
+
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE END PV */
@@ -78,6 +79,7 @@ void MX_FREERTOS_Init(void);
 /* Private function prototypes -----------------------------------------------*/
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart);
 /* USER CODE END PFP */
+
 /* USER CODE BEGIN 0 */
 
 
@@ -129,8 +131,6 @@ int main(void)
   MX_TIM3_Init();
   MX_TIM15_Init();
   MX_TIM2_Init();
-
-
   /* USER CODE BEGIN 2 */
 
 
@@ -266,10 +266,12 @@ int main(void)
   {
 
   /* USER CODE END WHILE */
+
   /* USER CODE BEGIN 3 */
 
   }
   /* USER CODE END 3 */
+
 }
 
 /**
@@ -376,7 +378,6 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 
 }
 /* USER CODE END 4 */
-
 
 /**
   * @brief  Period elapsed callback in non blocking mode

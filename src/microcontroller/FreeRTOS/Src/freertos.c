@@ -157,16 +157,17 @@ void MX_FREERTOS_Init(void) {
 /* USER CODE END Header_StartDefaultTask */
 void StartDefaultTask(void const * argument)
 {
-	enum fsm fsm_state;							//Create enum for Statemachine Tasks
-	fsm_state = STARTUP;					 	//Default Task --> Startup
-
   /* USER CODE BEGIN StartDefaultTask */
+  enum fsm fsm_state; // create enum for statemachine task
+  fsm_state = STARTUP; // Default Task -> Startup
+
   /* Infinite loop */
   for(;;)
   {
 	  //Statemachine acc. to PREN1 Documentation p.24
 	  switch(fsm_state){
 	  case STARTUP:
+		  	  // hallo Jan
 		  	  break;
 	  case WURFEL_ERKENNEN:
 		  	  	  	  	  	  	  if(wurfel_erkennen()==TASK_OK){

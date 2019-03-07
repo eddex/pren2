@@ -73,8 +73,6 @@
 #define Enc_ChA_MOT_V_GPIO_Port GPIOA
 #define HB_Sleep_Pin GPIO_PIN_8
 #define HB_Sleep_GPIO_Port GPIOA
-#define LD1_Pin GPIO_PIN_11
-#define LD1_GPIO_Port GPIOA
 #define Enc_ChB_MOT_H_Pin GPIO_PIN_12
 #define Enc_ChB_MOT_H_GPIO_Port GPIOA
 #define SWDIO_Pin GPIO_PIN_13
@@ -83,6 +81,8 @@
 #define SWCLK_GPIO_Port GPIOA
 #define VCP_RX_Pin GPIO_PIN_15
 #define VCP_RX_GPIO_Port GPIOA
+#define LED_Heartbeat_Pin GPIO_PIN_3
+#define LED_Heartbeat_GPIO_Port GPIOB
 
 /* ########################## Assert Selection ############################## */
 /**

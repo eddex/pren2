@@ -81,7 +81,10 @@ void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOF, SHDN_TOF_KLOTZ_Pin|SHDN_TOF_TAFEL_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, HB_Sleep_Pin|LD1_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(HB_Sleep_GPIO_Port, HB_Sleep_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(LED_Heartbeat_GPIO_Port, LED_Heartbeat_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pins : PFPin PFPin */
   GPIO_InitStruct.Pin = SHDN_TOF_KLOTZ_Pin|SHDN_TOF_TAFEL_Pin;
@@ -104,11 +107,11 @@ void MX_GPIO_Init(void)
   HAL_GPIO_Init(HB_Sleep_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PtPin */
-  GPIO_InitStruct.Pin = LD1_Pin;
+  GPIO_InitStruct.Pin = LED_Heartbeat_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(LD1_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(LED_Heartbeat_GPIO_Port, &GPIO_InitStruct);
 
 }
 
