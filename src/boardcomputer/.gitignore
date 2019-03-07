@@ -70,3 +70,6 @@ venv/
 
 # cache files
 __pycache__
+
+# logfiles
+*.log
