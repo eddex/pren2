@@ -1,4 +1,7 @@
 # GitIgnore files
+# Settings
+**/.settings/
+
 # Object files
 *.o
 *.ko
@@ -30,5 +33,6 @@
 *.hex
 
 # Debug files
+**/Debug/
 *.dSYM/
 *.su
