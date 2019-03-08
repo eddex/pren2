@@ -8,6 +8,9 @@
 #ifndef SERVO_H_
 #define SERVO_H_
 
+// Init method
+void Servo_Init();
+
 // Setter method for servo angle 0..90°
 void Servo_SetAngle(uint8_t angle);
 

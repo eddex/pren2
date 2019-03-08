@@ -42,3 +42,18 @@ taskState wurfel_erkennen(void){
 	if(storeTimeValue>1500){return TASK_TIME_OVERFLOW;}
 	else{return TASK_OK;}
 }
+
+taskState haltesignal_erkennen(void){
+	startTimeMeasurment();											//Zeitmessung beginnen für Abbruchkriterium des Tasks
+
+	PID_Velo(12);													//Motoren starten auf tiefster Geschwindigkeitsstufe
+
+	//Vorwärts fahren und auf Würfelekrennung warten, Abbruch nach 15s nichts erkennen
+	while(getDistanceValue() > 60 || getTimeMeasurement()<1500){
+		storeTimeValue=getTimeMeasurement();
+	}
+	Motor_Break();													//Motoren stoppen wenn Distanz zum Würfel im Bereich von x (mm) - y (mm) ist ODER Time overflow
+
+	if(storeTimeValue>1500){return TASK_TIME_OVERFLOW;}
+	else{return TASK_OK;}
+}

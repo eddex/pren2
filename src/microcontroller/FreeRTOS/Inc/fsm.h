@@ -13,10 +13,16 @@ enum fsm{
 	STARTUP,
 	WURFEL_ERKENNEN,
 	WURFEL_VORFAHREN,
-	WURFEL_LADEN,
-	WURFEL_GELADEN,
-	START_ERKENNEN,
-	SCHNELLFAHRT
+	SERVO_RUNTER,
+	SERVO_RAUF,
+	WURFEL_ZURUCKFAHREN,
+	STARTPOSITION,
+	SCHNELLFAHRT,
+	BREMSEN,
+	FINALES_HALTESIGNAL,
+	HALTESIGNAL_ANFAHREN,
+	HALTESIGNAL_STOPPEN,
+	STOP
 };
 
 typedef enum {
@@ -25,5 +31,7 @@ typedef enum {
 
 
 taskState wurfel_erkennen(void);
+
+taskState haltesignal_erkennen(void);
 
 #endif /* FSM_H_ */
