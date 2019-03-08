@@ -159,20 +159,20 @@ void StartDefaultTask(void const * argument)
 {
   /* USER CODE BEGIN StartDefaultTask */
   enum fsm fsm_state; // create enum for statemachine task
-  fsm_state = STARTUP; // Default Task -> Startup
+  fsm_state = STARTUP; // Default State -> Startup
 
   /* Infinite loop */
   for(;;)
   {
-	  //Statemachine acc. to PREN1 Documentation p.24
-	  switch(fsm_state){
-	  case STARTUP:
-		  	  // hallo Jan
-		  	  break;
-	  case WURFEL_ERKENNEN:
-		  	  	  	  	  	  	  if(wurfel_erkennen()==TASK_OK){
-		  	  	  	  	  	  		  fsm_state = WURFEL_LADEN;
-		  	  	  	  	  	  	  }
+	//Statemachine acc. to PREN1 Documentation p.24
+	switch(fsm_state){
+	case STARTUP:
+
+	break;
+	case WURFEL_ERKENNEN:
+		if(wurfel_erkennen()==TASK_OK){
+		fsm_state = WURFEL_LADEN;
+		}
 		  	  	  	  	  	  	  else{
 		  	  	  	  	  	  		  //Was machen wir wenn der Würfel nicht erkannt wird???
 		  	  	  	  	  	  	  }
