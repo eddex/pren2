@@ -24,6 +24,11 @@
 uint16_t servoPWM = 0;
 uint8_t oldAngle = 0;
 
+// Init method
+void Servo_Init(){
+	__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, pwmValue_0); // 0° anfahren
+}
+
 // Setter method for servo angle 0..90°
 void Servo_SetAngle(uint8_t angle){
 	if (angle > 90){
