@@ -74,6 +74,8 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define slowVelo 10 // langsame Geschwindigkeit [mm/s]
+#define distTofToWurfel 100 // Distanz zwischen Tof und Würfel
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -160,32 +162,54 @@ void StartDefaultTask(void const * argument)
   /* USER CODE BEGIN StartDefaultTask */
   enum fsm fsm_state; // create enum for statemachine task
   fsm_state = STARTUP; // Default State -> Startup
+  int32_t posWurfel; // Würfelpositionsmerker
 
   /* Infinite loop */
   for(;;)
   {
 	//Statemachine acc. to PREN1 Documentation p.24
 	switch(fsm_state){
-	case STARTUP:
-
-	break;
-	case WURFEL_ERKENNEN:
-		if(wurfel_erkennen()==TASK_OK){
-		fsm_state = WURFEL_LADEN;
+	case STARTUP: // Warten auf Startbefehl von Raspi
+		// TODO implement method getStartSignal in Raspi.c
+		if (0) /*getStartSignal()*/{
+			fsm_state = WURFEL_ERKENNEN;
 		}
-		  	  	  	  	  	  	  else{
-		  	  	  	  	  	  		  //Was machen wir wenn der Würfel nicht erkannt wird???
-		  	  	  	  	  	  	  }
-	  		  break;
-	  case WURFEL_LADEN:
-	  		  break;
-	  case WURFEL_GELADEN:
-	  		  break;
-	  case START_ERKENNEN:
-	  	  		  break;
-	  case SCHNELLFAHRT:
-	  		  break;
-	  }
+	break;
+
+	case WURFEL_ERKENNEN:
+		PID_Velo(slowVelo); // mit langsamer Geschwindigkeit fahren
+
+		if(wurfel_erkennen()==TASK_OK){
+			posWurfel = Quad_GetPos();
+			fsm_state = WURFEL_VORFAHREN;
+		}
+		else{
+		//Was machen wir wenn der Würfel nicht erkannt wird???
+		}
+		break;
+
+	case WURFEL_VORFAHREN:
+		PID_Pos(posWurfel+distTofToWurfel); // An Würfelposition fahren
+
+		// TODO implement method PID_InPos in pid.c
+		if (0) /*PID_InPos()*/{
+
+		}
+
+	case WURFEL_LADEN:
+
+
+		break;
+
+	case WURFEL_GELADEN:
+		break;
+
+	case START_ERKENNEN:
+		break;
+
+	case SCHNELLFAHRT:
+		break;
+	}
     osDelay(1);
   }
   /* USER CODE END StartDefaultTask */
