@@ -54,6 +54,9 @@
 
 /* USER CODE BEGIN 0 */
 
+flags_UartData_t flags_UartData;
+
+
 /* USER CODE END 0 */
 
 UART_HandleTypeDef huart1;
@@ -201,6 +204,21 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
 } 
 
 /* USER CODE BEGIN 1 */
+
+void setFlagStructure(uint8_t value){
+
+	flags_UartData.startSignal = (value & 0b10000000)>>7;
+	flags_UartData.FinalHSerkannt = (value & 0b00000100)>>2;
+	flags_UartData.singalCounter = (value & 0b00000010)>>1;
+	flags_UartData.spareFlag = (value & 0b00000001);
+	flags_UartData.RundenCounter = (value & 0b01111000)>>3;
+}
+
+flags_UartData_t getFlagStructure(void){
+	return flags_UartData;
+}
+
+
 
 /* USER CODE END 1 */
 

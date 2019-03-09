@@ -69,6 +69,7 @@
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
+#define FunkFernsteuer_BoardcomputerBetrieb 0			//0 --> Boardcomputer / 1 --> Funkfernsteuerung
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -90,9 +91,13 @@ uint8_t tim15Count10ms = 0;				//Variable die im TIM15 overflow incrementiert wi
 //*************UART variable declaration******************************************
 
 //Receive Data from Radio Module
-uint8_t rx_dataUART1[]={0,0,0,0};	//Receive Data Buffer for Radio Moudl data
-uint8_t receivedSpeedValue = 0;		//Calculated Speedvalue Group with rx_dataUART1
+uint8_t rx_dataUART1_RadioModule[]={0,0,0,0};	//Receive Data Buffer for Radio Moudl data
+uint8_t receivedSpeedValue = 0;		//Calculated Speedvalue Group with rx_dataUART1_RadioModule
 uint16_t pwmValue = 0;				//(not used) Finally used pwmValue for the pwm generation
+
+//Receive DAta from Boardcomputer
+uint8_t rx_dataUART1_Boardcomputer[]={0,0};
+uint8_t storeFlagValue = 0;
 
 //debugVariable
 uint8_t tx_dataUART2[] = {0};		//Transmit Data Buffer for UART2 Debugging
@@ -168,7 +173,12 @@ int main(void)
    * 1 Stop Bit
    */
   //Interrupt enable for UART1 Receive Function "HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)"
-  HAL_UART_Receive_IT(&huart1, rx_dataUART1, 1);
+#if FunkFernsteuer_BoardcomputerBetrieb
+  HAL_UART_Receive_IT(&huart1, rx_dataUART1_RadioModule, 1);
+#else
+  HAL_UART_Receive_IT(&huart1, rx_dataUART1_Boardcomputer, 1);
+#endif
+
   //***************************************************************
 
 
@@ -248,6 +258,9 @@ int main(void)
 
   //Enable H-Bridge Module of Motor1 and Motor2
   HAL_GPIO_WritePin(HB_Sleep_GPIO_Port, HB_Sleep_Pin, GPIO_PIN_SET);
+  setFlagStructure(255);
+
+
   /* USER CODE END 2 */
 
   /* Call init function for freertos objects (in freertos.c) */
@@ -338,10 +351,11 @@ void SystemClock_Config(void)
  */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 
+#if FunkFernsteuer_BoardcomputerBetrieb
 
-	HAL_UART_Receive_IT(&huart1, rx_dataUART1, 1);									//Restart Interrupt reception mode
+	HAL_UART_Receive_IT(&huart1, rx_dataUART1_RadioModule, 1);									//Restart Interrupt reception mode
 
-	if(rx_dataUART1[0]>47 && rx_dataUART1[0]<56){									//rx_dataUART1 with the received values between 48 an 55
+	if(rx_dataUART1_RadioModule[0]>47 && rx_dataUART1[0]<56){									//rx_dataUART1_RadioModule with the received values between 48 an 55
 		receivedSpeedValue = rx_dataUART1[0]-48;									//Speed group 0 - 7
 		setSpeedGroupValue(receivedSpeedValue);										//Store Speedgroupvalue, used in ServoMotorTask
 		//pwmValue = (uint16_t)((Timer3MaxCounterPeriod/7)*receivedSpeedValue);		//Final PWM Value from 0(0% duty cycle) to 20000(100% duty cycle);
@@ -349,7 +363,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 
 	//Über Funkmodul erhaltener Wert ist kein Geschwindigkeitswert sonder für die Drehrichtung
 	else {
-		setDrehrichtung(rx_dataUART1[0]);											//Valid Values: 108 /114
+		setDrehrichtung(rx_dataUART1_RadioModule[0]);											//Valid Values: 108 /114
 	}
 
 	//Depending on Speedgroup (0-7) calculate the Motorvelocity in u/s
@@ -376,6 +390,14 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 	//HAL_UART_Receive_IT(&huart2, rx_dataUART1, 1);				//restart Interrupt reception mode
 	//HAL_UART_Transmit(&huart2, tx_data, 1, 1000);
 
+#else
+	HAL_UART_Receive_IT(&huart1, rx_dataUART1_Boardcomputer, 2);		//Restart Interrupt reception mode
+	if(rx_dataUART1_Boardcomputer[0] == 0x7F){							//SYNC-Zeichen -->0111'1111
+		setFlagStructure(rx_dataUART1_Boardcomputer[1]);				//Save Received UART Data in Structure
+	}
+
+
+#endif
 }
 /* USER CODE END 4 */
 
