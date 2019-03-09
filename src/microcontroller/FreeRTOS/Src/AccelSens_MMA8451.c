@@ -14,6 +14,8 @@
 
 #include "AccelSens_MMA8451.h"
 
+taskState_t accelTaskState;
+
 
 //Global variables
 uint16_t MMA8451_DevAddress = finalDevAddress_MMA8451<<1;			//MMA8451 Address shiftet for I2C use
@@ -41,7 +43,9 @@ uint8_t getEnableSensorTask(void){
 	return enableSensorTask;
 }
 
-void MMA8451_Init(void){
+taskState_t MMA8451_Init(void){
+
+	accelTaskState= TASK_OK;
 
 	//Reset databuffer for Init routine
 	dataBuffer[0] = 0;
@@ -49,20 +53,20 @@ void MMA8451_Init(void){
 
 	//Reset MMA8451
 	dataBuffer[0] = 0x40; //Set the Reset Bit for Device
-	if(HAL_I2C_Mem_Write(&hi2c1, MMA8451_DevAddress, MMA8451_REG_CTRL_REG2,1, dataBuffer, 1, 100)==HAL_OK);
+	if(HAL_I2C_Mem_Write(&hi2c1, MMA8451_DevAddress, MMA8451_REG_CTRL_REG2,1, dataBuffer, 1, 100)==HAL_OK);else{accelTaskState= TASK_ERROR;};
 
 
 	//Wait while reset bit is set(automatically cleard after reset by MC)
 	dataBuffer[0] = 0;
 	do{
-		if(HAL_I2C_Mem_Read(&hi2c1, MMA8451_DevAddress,MMA8451_REG_CTRL_REG2,1, dataBuffer, 1, 100)==HAL_OK);
+		if(HAL_I2C_Mem_Read(&hi2c1, MMA8451_DevAddress,MMA8451_REG_CTRL_REG2,1, dataBuffer, 1, 100)==HAL_OK);else{accelTaskState= TASK_ERROR;};
 	}while(dataBuffer[0] != 0);
 
 
 	//Check Data in MMA8451_REG_XYZ_DATA_CFG
 	dataBuffer[0] = 0;
 	dataBuffer[1] = 0;
-	if(HAL_I2C_Mem_Read(&hi2c1, MMA8451_DevAddress,MMA8451_REG_XYZ_DATA_CFG,1, dataBuffer, 1, 100)==HAL_OK);
+	if(HAL_I2C_Mem_Read(&hi2c1, MMA8451_DevAddress,MMA8451_REG_XYZ_DATA_CFG,1, dataBuffer, 1, 100)==HAL_OK);else{accelTaskState= TASK_ERROR;};
 
 	//Output buffer data format full scale. Default value: 00 (2g) --> TestLed for Debug
 	uint8_t test = dataBuffer[0] && 0x03;
@@ -73,30 +77,33 @@ void MMA8451_Init(void){
 	//Configuration of System Control Register 2
 	dataBuffer[0] = 0x02;					//Choose active MODE
 	dataBuffer[1] = 0;
-	if(HAL_I2C_Mem_Write(&hi2c1, MMA8451_DevAddress,MMA8451_REG_CTRL_REG2,1, dataBuffer, 1, 100)==HAL_OK);
+	if(HAL_I2C_Mem_Write(&hi2c1, MMA8451_DevAddress,MMA8451_REG_CTRL_REG2,1, dataBuffer, 1, 100)==HAL_OK);else{accelTaskState= TASK_ERROR;};
 
 	//Configuration of System Control Register 1
 	dataBuffer[0] = 0x3D;
 	dataBuffer[1] = 0;
-	if(HAL_I2C_Mem_Write(&hi2c1, MMA8451_DevAddress,MMA8451_REG_CTRL_REG1,1, dataBuffer, 1, 100)==HAL_OK);
+	if(HAL_I2C_Mem_Write(&hi2c1, MMA8451_DevAddress,MMA8451_REG_CTRL_REG1,1, dataBuffer, 1, 100)==HAL_OK);else{accelTaskState= TASK_ERROR;};
 
 	//Check new Data in System Control Register 1
 	dataBuffer[0] = 0;
 	dataBuffer[1] = 0;
-	if(HAL_I2C_Mem_Read(&hi2c1, MMA8451_DevAddress,MMA8451_REG_CTRL_REG1,1, dataBuffer, 1, 100)==HAL_OK);
+	if(HAL_I2C_Mem_Read(&hi2c1, MMA8451_DevAddress,MMA8451_REG_CTRL_REG1,1, dataBuffer, 1, 100)==HAL_OK);else{accelTaskState= TASK_ERROR;};
 
 	if(dataBuffer[0] == 0x3D){
 		//HAL_GPIO_WritePin(HB_Sleep_GPIO_Port, HB_Sleep_Pin, GPIO_PIN_SET);
 	 }
 	//HAL_GPIO_WritePin(HB_Sleep_GPIO_Port, HB_Sleep_Pin, GPIO_PIN_RESET);
+
+	return accelTaskState;
 }
 
 
 
-void measureAccel3AxisValues(void){
+taskState_t measureAccel3AxisValues(void){
 
+	accelTaskState= TASK_OK;
 	//Read 6 Bytes --> 2Byte value of each axis
-	if(HAL_I2C_Mem_Read(&hi2c1, MMA8451_DevAddress,MMA8451_REG_OUT_X_MSB,1, axisXYZ_dataBuffer, 6, 10)==HAL_OK);
+	if(HAL_I2C_Mem_Read(&hi2c1, MMA8451_DevAddress,MMA8451_REG_OUT_X_MSB,1, axisXYZ_dataBuffer, 6, 10)==HAL_OK);else{accelTaskState= TASK_ERROR;};
 
 	//Shift bits because of 14bit value --> See datasheet
 	Xout_14_bit = ((axisXYZ_dataBuffer[0]<<8 | axisXYZ_dataBuffer[1])) >> 2;           // Compute 14-bit X-axis output value
@@ -128,6 +135,9 @@ void measureAccel3AxisValues(void){
 	Xout_g = (1000*Xout_14_bit) / SENSITIVITY_2G;              // Compute X-axis output value in mg's
 	Yout_g = (1000*Yout_14_bit) / SENSITIVITY_2G;              // Compute Y-axis output value in mg's
 	Zout_g = (1000*Zout_14_bit) / SENSITIVITY_2G;              // Compute Z-axis output value in mg's
+
+
+	return accelTaskState;
 }
 
 int16_t getXValue(void){

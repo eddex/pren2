@@ -26,7 +26,7 @@
 //enum stateOfTask taskState;
 uint16_t storeTimeValue= 0;
 
-taskState wurfel_erkennen(void){
+taskState_t wurfel_erkennen(void){
 
 	startTimeMeasurment();											//Zeitmessung beginnen für Abbruchkriterium des Tasks
 
@@ -43,7 +43,7 @@ taskState wurfel_erkennen(void){
 	else{return TASK_OK;}
 }
 
-taskState haltesignal_erkennen(void){
+taskState_t haltesignal_erkennen(void){
 	startTimeMeasurment();											//Zeitmessung beginnen für Abbruchkriterium des Tasks
 
 	PID_Velo(12);													//Motoren starten auf tiefster Geschwindigkeitsstufe

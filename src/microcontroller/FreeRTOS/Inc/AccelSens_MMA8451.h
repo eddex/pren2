@@ -1,6 +1,7 @@
 #ifndef _ADAFRUIT_MMA8451_H_
 #define _ADAFRUIT_MMA8451_H_
 
+#include "fsm.h"
 
 /*=========================================================================
     I2C ADDRESS/BITS
@@ -63,8 +64,8 @@ typedef enum
 } mma8451_dataRate_t;
 
 
-void MMA8451_Init(void);
-void measureAccel3AxisValues(void);
+taskState_t MMA8451_Init(void);
+taskState_t measureAccel3AxisValues(void);
 int16_t getXValue(void);
 int16_t getYValue(void);
 int16_t getZValue(void);

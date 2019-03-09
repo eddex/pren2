@@ -154,7 +154,7 @@ int main(void)
   Motor_Init();
 
   //Configuration of TaskEnable
-  setEnableSensorTask(0);										//Disable SensorTask
+  setEnableSensorTask(1);										//Enable = 1 / Disable= 0 -> SensorTask
 
   //If Sensortask enabled
   if(getEnableSensorTask() == 1){
@@ -258,7 +258,6 @@ int main(void)
 
   //Enable H-Bridge Module of Motor1 and Motor2
   HAL_GPIO_WritePin(HB_Sleep_GPIO_Port, HB_Sleep_Pin, GPIO_PIN_SET);
-  setFlagStructure(255);
 
 
   /* USER CODE END 2 */

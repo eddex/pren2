@@ -27,11 +27,11 @@ enum fsm{
 
 typedef enum {
 	TASK_OK, TASK_ERROR, TASK_TIME_OVERFLOW
-}taskState;
+}taskState_t;
 
 
-taskState wurfel_erkennen(void);
+taskState_t wurfel_erkennen(void);
 
-taskState haltesignal_erkennen(void);
+taskState_t haltesignal_erkennen(void);
 
 #endif /* FSM_H_ */

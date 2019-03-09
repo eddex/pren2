@@ -377,13 +377,18 @@ void StartTask02(void const * argument)
   //char x = 'x';
   //char y = 'y';
   char z = 'z';
+  volatile uint16_t testInt;
   /* Infinite loop */
   for(;;)
   {
 	  //Im Main.c gibt es bei der Initialiserung eine Funktion, die Entscheidet, ob dieser Task ausgeführt wird oder nicht
 	  if(getEnableSensorTask() == 1){
-		  measureAccel3AxisValues();
-		  //measureDistanceValue();
+		  if(measureAccel3AxisValues()==TASK_OK){
+			  testInt = getZValue();
+		  }
+		  if(measureDistanceValue()==TASK_OK){
+			  testInt = getDistanceValue();
+		  }
 		  txData[0] = (uint8_t) z;
 		  txData[1] = (uint8_t) (getZValue() >> 8);
 		  txData[2] = (uint8_t) (getZValue() & 0xff);
