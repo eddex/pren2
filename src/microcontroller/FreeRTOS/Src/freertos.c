@@ -83,6 +83,9 @@
 #define MaxNbrRounds 2 // maximale Anzahl Runden
 #define MaxLoadAttempts 4 // maximale Anzahl Würfelladeversuche
 #define MaxTrackLength 15000 // maximale Streckenlänge [mm]
+
+
+#define WuerfelerkenneUndLaden_TEST 1
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -191,15 +194,23 @@ void StartDefaultTask(void const * argument)
 	// Warten auf Startbefehl von Raspi
 	case STARTUP:
 		// TODO implement method getStartSignal in Raspi.c
+		//getStartSignal is available with the function_call "flags_UartData_t getFlagStructure(void)" see for more info in usart.h
 		if (0) /*getStartSignal()*/{
 			posStart=Quad_GetPos();
 			fsm_state = WURFEL_ERKENNEN;
 		}
+
+		#if WuerfelerkenneUndLaden_TEST
+			fsm_state = WURFEL_ERKENNEN;
+		#endif
+
+
 	break;
 
 	// Warten bis Würfel erkennt wird
 	case WURFEL_ERKENNEN:
-		PID_Velo(SlowVelo); // mit langsamer Geschwindigkeit fahren
+		//Nicht notwendig, da in Funktion wurfel_erkennen() bereits gemacht wird.
+		//PID_Velo(SlowVelo); // mit langsamer Geschwindigkeit fahren
 
 		if(wurfel_erkennen()==TASK_OK){
 			posWurfel = Quad_GetPos();
@@ -222,6 +233,8 @@ void StartDefaultTask(void const * argument)
 
 	// Lademechanismus nach unten fahren
 	case SERVO_RUNTER:
+
+		//Evtl. Os_delay() Funktion verwenden damit Würfel nicht mit Lichtgeschwindigkeit aufgelanden wird?
 		servoCtr++;
 		if (servoCtr>=100){
 			servoCtr=0;
