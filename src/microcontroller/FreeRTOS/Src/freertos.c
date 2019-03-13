@@ -65,6 +65,7 @@
 #include "pid.h"
 #include "velocity.h"
 #include "quad.h"
+#include "servo.h"
 #include "fsm.h"
 /* USER CODE END Includes */
 
@@ -74,6 +75,17 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define SlowVelo 10 // langsame Geschwindigkeit [mm/s]
+#define DistTofToWurfel 100 // Distanz zwischen Tof und Würfel
+#define WurfelLength 50 // Würfellänge
+#define MaxVelo 2000 // maximale Geschwindigkeit [mm/s]
+#define MaxNbrSignals 10 // maximale Anzahl Signale auf der Strecke
+#define MaxNbrRounds 2 // maximale Anzahl Runden
+#define MaxLoadAttempts 4 // maximale Anzahl Würfelladeversuche
+#define MaxTrackLength 15000 // maximale Streckenlänge [mm]
+
+
+#define WuerfelerkenneUndLaden_TEST 1
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -161,31 +173,204 @@ void StartDefaultTask(void const * argument)
   enum fsm fsm_state; // create enum for statemachine task
   fsm_state = STARTUP; // Default State -> Startup
 
+  uint8_t wurfelCtr = 0; // Zähler Anzahl Ladeversuche
+
+  int32_t posStart = 0;	// Positionsmerker bei Startsignal
+  int32_t posWurfel = 0; // Positionsmerker Würfel erkannt
+  int32_t posHaltesignal = 0; // Positionsmerker Haltesignal erkannt
+  int32_t distHaltesignal = 0; // Distanz zum Haltesignal
+
+  uint32_t servoCtr = 0; // Zähler um Servo langsam zu bewegen
+  uint32_t accCtr = 0; // Zähler um Motoren langsam zu beschleunigen
+
+  uint8_t servoAngle = 0; // Winkelmerker Servo
+  uint8_t speed = 0; // Geschwindigkeit der Motoren
+
   /* Infinite loop */
   for(;;)
   {
 	//Statemachine acc. to PREN1 Documentation p.24
 	switch(fsm_state){
+	// Warten auf Startbefehl von Raspi
 	case STARTUP:
+		// TODO implement method getStartSignal in Raspi.c
+		//getStartSignal is available with the function_call "flags_UartData_t getFlagStructure(void)" see for more info in usart.h
+		if (0) /*getStartSignal()*/{
+			posStart=Quad_GetPos();
+			fsm_state = WURFEL_ERKENNEN;
+		}
+
+		#if WuerfelerkenneUndLaden_TEST
+			fsm_state = WURFEL_ERKENNEN;
+		#endif
+
 
 	break;
+
+	// Warten bis Würfel erkennt wird
 	case WURFEL_ERKENNEN:
+		//Nicht notwendig, da in Funktion wurfel_erkennen() bereits gemacht wird.
+		//PID_Velo(SlowVelo); // mit langsamer Geschwindigkeit fahren
+
 		if(wurfel_erkennen()==TASK_OK){
-		fsm_state = WURFEL_LADEN;
+			posWurfel = Quad_GetPos();
+			fsm_state = WURFEL_VORFAHREN;
 		}
-		  	  	  	  	  	  	  else{
-		  	  	  	  	  	  		  //Was machen wir wenn der Würfel nicht erkannt wird???
-		  	  	  	  	  	  	  }
-	  		  break;
-	  case WURFEL_LADEN:
-	  		  break;
-	  case WURFEL_GELADEN:
-	  		  break;
-	  case START_ERKENNEN:
-	  	  		  break;
-	  case SCHNELLFAHRT:
-	  		  break;
-	  }
+		else{ // Würfel nicht erkannt
+			fsm_state = STARTPOSITION;
+		}
+		break;
+
+	// Vorfahren mit Lademechanismus zum Würfel
+	case WURFEL_VORFAHREN:
+		PID_Pos(posWurfel+DistTofToWurfel); // An Würfelposition fahren
+
+		// TODO implement method PID_InPos in pid.c
+		if (0) /*PID_InPos()*/{
+			fsm_state = SERVO_RUNTER;
+		}
+		break;
+
+	// Lademechanismus nach unten fahren
+	case SERVO_RUNTER:
+
+		//Evtl. Os_delay() Funktion verwenden damit Würfel nicht mit Lichtgeschwindigkeit aufgelanden wird?
+		servoCtr++;
+		if (servoCtr>=100){
+			servoCtr=0;
+			servoAngle = Servo_GetAngle(); // Winkel auslesen
+			Servo_SetAngle(servoAngle++); // Winkel vergrössern
+			if (servoAngle >= 90){
+				fsm_state = SERVO_RAUF;
+			}
+		}
+		break;
+
+	// Lademechanismus nach oben fahren
+	case SERVO_RAUF:
+		servoCtr++;
+		if (servoCtr>=100){
+			servoCtr=0;
+			servoAngle = Servo_GetAngle(); // Winkel auslesen
+			Servo_SetAngle(servoAngle--); // Winkel verkleinern
+			if (servoAngle <= 0){
+				fsm_state = WURFEL_ZURUCKFAHREN;
+			}
+		}
+		break;
+
+	// Würfelsensor zur Erkennposition zurückfahren -> Kontrolle Würfel geladen
+	case WURFEL_ZURUCKFAHREN:
+		PID_Pos(posWurfel-DistTofToWurfel); // Zurückfahren zur Würfelerkennposition
+
+		if(wurfel_erkennen()==TASK_OK){
+			wurfelCtr++;
+			if (wurfelCtr >= MaxLoadAttempts){ // maximale Anzahl Versuche erreicht
+				wurfelCtr=0;
+				fsm_state = STARTPOSITION;
+			}
+			else{
+				posWurfel = Quad_GetPos()-WurfelLength;
+				fsm_state = WURFEL_VORFAHREN;
+			}
+		}
+		else{ // TimeOut -> Würfel ist aufgeladen
+			wurfelCtr=0;
+			fsm_state = STARTPOSITION;
+		}
+		break;
+
+	// Startposition anfahren -> Anlauf holen
+	case STARTPOSITION:
+		PID_Pos(posStart); // Startposition anfahren
+
+		// TODO implement method PID_InPos in pid.c
+		if (0) /*PID_InPos()*/{
+			fsm_state = SCHNELLFAHRT;
+		}
+		break;
+
+	// Schnellfahrt (Beschleunigen und Abbruchkriterien checken)
+	case SCHNELLFAHRT:
+		accCtr++;
+		if (accCtr>=100){
+			speed++;
+			if (speed >= MaxVelo){
+				speed = MaxVelo;
+			}
+			PID_Velo(speed);
+		}
+
+		// Anzahl Runden erreicht
+		// TODO implement method getNbrRounds in Raspi.c
+		if (0) /*(getNbrRounds >= MaxNbrRounds)*/{
+			accCtr = 0;
+			fsm_state = BREMSEN;
+		}
+		 // Zu viele Signale erkannt
+		// TODO implement method getNbrSignals in Raspi.c
+		else if (0) /*(getNbrSignals() >= MaxNbrSignals)*/{
+			accCtr = 0;
+			fsm_state = BREMSEN;
+		}
+		// Gemessene Streck grösser als maximale Streckenlänge
+		else if ((Quad_GetPos()-posStart)>=MaxTrackLength){
+			accCtr = 0;
+			fsm_state = BREMSEN;
+		}
+		break;
+
+	// Abbremsen zur Haltesignalerkennung
+	case BREMSEN:
+		accCtr++;
+		if (accCtr>=100){
+			speed--;
+			if (speed <= SlowVelo){
+				fsm_state = FINALES_HALTESIGNAL;
+			}
+			PID_Velo(speed);
+		}
+		break;
+
+	// Warten auf Signal finales Haltesignal erkannt von Raspi
+	case FINALES_HALTESIGNAL:
+		PID_Velo(SlowVelo);
+		// TODO implement method getHaltesignal in Raspi.c
+		if (0)/*getHaltesignal()*/{ // finales Haltesignal erkannt
+			fsm_state = HALTESIGNAL_ANFAHREN;
+		}
+
+		break;
+
+	// Haltesignal mit TOF erkennen
+	case HALTESIGNAL_ANFAHREN:
+		PID_Velo(SlowVelo);
+		if(haltesignal_erkennen()==TASK_OK){
+			posHaltesignal=Quad_GetPos();
+			distHaltesignal=getDistanceValue();
+			fsm_state = HALTESIGNAL_STOPPEN;
+		}
+		else{
+			//Was machen wir wenn das Haltesignal nicht erkannt wird???
+		}
+		break;
+
+	// Positionregelung vor Haltesignal
+	case HALTESIGNAL_STOPPEN:
+		PID_Pos(posHaltesignal+distHaltesignal);
+		// TODO implement method PID_InPos in pid.c
+		if (0) /*PID_InPos()*/{
+			fsm_state = STOP;
+		}
+		break;
+
+	// Warten bis Startsignal von Raspi zurückgenommen wird
+	case STOP:
+		if (0) /*!getStartSignal()*/{
+			fsm_state = STARTUP;
+		}
+		break;
+	}
     osDelay(1);
   }
   /* USER CODE END StartDefaultTask */
@@ -205,13 +390,18 @@ void StartTask02(void const * argument)
   //char x = 'x';
   //char y = 'y';
   char z = 'z';
+  volatile uint16_t testInt;
   /* Infinite loop */
   for(;;)
   {
 	  //Im Main.c gibt es bei der Initialiserung eine Funktion, die Entscheidet, ob dieser Task ausgeführt wird oder nicht
 	  if(getEnableSensorTask() == 1){
-		  measureAccel3AxisValues();
-		  //measureDistanceValue();
+		  if(measureAccel3AxisValues()==TASK_OK){
+			  testInt = getZValue();
+		  }
+		  if(measureDistanceValue()==TASK_OK){
+			  testInt = getDistanceValue();
+		  }
 		  txData[0] = (uint8_t) z;
 		  txData[1] = (uint8_t) (getZValue() >> 8);
 		  txData[2] = (uint8_t) (getZValue() & 0xff);
