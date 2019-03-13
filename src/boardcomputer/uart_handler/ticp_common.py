@@ -67,11 +67,12 @@ class TICPCommand(Enum):
 
 
 class TICPMessageType(Enum):
-    """Enumeration for Message Types of the TICP Protocol. This Class is a specialization of the Enum class.
-    Use this Enumeration for the creation of TICP Messages.
+    """Enumeration for Message Types of the TICP Protocol. This Class is a specialization of
+    the Enum class. Use this Enumeration for the creation of TICP Messages.
 
     Example:
-        For the creation of TICPMessageType Enum from existing TICPCommands use the TICPCMessageTypeFactory
+        For the creation of TICPMessageType Enum from existing TICPCommands use
+        the TICPCMessageTypeFactory
 
             $ factory = TICPMessageTypeFactory()
             $ msg = factory.get_TICPMessageType_from_TICPCommand(TICPCommand.SYN_MC)
@@ -166,3 +167,16 @@ class TICPMessageTypeFactory:
 
         """
         return self.__command_to_msg_type_dict[command]
+
+    def get_ticp_message_type_from_int(self, opcode: np.uint8) -> TICPMessageType:
+        """ Factory methode for creating an TICPMessageType from a 'uint8' opcode
+
+        Args:
+            opcode: The opcode for which a TICPMessageType should be created
+
+        Returns:
+            The return value in form of an TICPMessageType Enum
+
+        """
+        cmd = TICPCommand(opcode)
+        return self.__command_to_msg_type_dict[cmd]
