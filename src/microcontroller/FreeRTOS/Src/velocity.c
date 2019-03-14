@@ -10,6 +10,12 @@
 #include "velocity.h"
 #include "quad.h"
 
+#define TicksPerRev 48 // Ticks pro Motorumdrehung
+#define iGetriebe 9.68 // Untersetzung
+#define Wirkdurchmesser 26 // Wirkdurchmesser [mm]
+#define Wirkumfang Wirkdurchmesser * 3.141 // Wirkdurchmesser * Pi [mm]
+#define Frequency 100 // Aufruffrequenz (10ms = 100Hz)
+
 int32_t velocity;
 int32_t oldPos;
 
@@ -19,7 +25,7 @@ void Velo_Init(){
 	oldPos = 0;
 }
 
-// Returns Encoder Velocity in U/s
+// Returns Encoder Velocity in mm/s
 int32_t Velo_GetVelo(){
 	return velocity;
 }
@@ -29,8 +35,9 @@ int16_t VelCounter = 0;
 // Samples Velocity
 void Velo_Sample(){
 	int32_t newPos = Quad_GetPos();
-	int32_t diff = newPos - oldPos;
-	velocity = (diff * 100) / 48;
+	int32_t diffTicks = newPos - oldPos; // Differenzticks zwischen alter und neuer Position
+	int32_t diffDist = (diffTicks * Wirkumfang) / (iGetriebe * TicksPerRev);
+	velocity = diffDist * Frequency;
 	oldPos = newPos;
 
 	log_velo[VelCounter] = velocity;
