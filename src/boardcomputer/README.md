@@ -28,6 +28,11 @@ if there are errors regarding your execution policy, run powershell as admin and
 - file names for tests must start with `test_` otherwise the tests are not found by pytest
 - test methods must start with `test_` otherwise the tests are not found by pytest
 
+## coding style
+- the [google python style guide](https://github.com/google/styleguide/blob/gh-pages/pyguide.md) is used for this project
+- `yapf` can be used for auto formatting: https://github.com/google/yapf/#installation
+- to setup pylint in PyCharm follow [this guide on stackoverflow](https://stackoverflow.com/questions/38134086/how-to-run-pylint-with-pycharm)
+
 ## software components
 
 ### logging
