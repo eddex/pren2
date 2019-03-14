@@ -31,7 +31,7 @@ taskState_t wurfel_erkennen(void){
 
 	startTimeMeasurment();											//Zeitmessung beginnen für Abbruchkriterium des Tasks
 
-	PID_Velo(12);													//Motoren starten auf tiefster Geschwindigkeitsstufe
+	PID_Velo(100);													//Motoren starten auf tiefster Geschwindigkeitsstufe
 
 
 	//Vorwärts fahren und auf Würfelekrennung warten, Abbruch nach 15s nichts erkennen

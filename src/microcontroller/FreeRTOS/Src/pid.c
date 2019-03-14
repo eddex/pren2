@@ -35,7 +35,7 @@ void PID_Init(){
 }
 
 
-// Geschwindigkeitsregler U/s
+// Geschwindigkeitsregler mm/s
 void PID_Velo(int32_t set_velo){
 	meas_velo = Velo_GetVelo();
 	error = set_velo - meas_velo;
@@ -43,6 +43,7 @@ void PID_Velo(int32_t set_velo){
 	integral_v += error;
 	iVal = (Ki_v * integral_v) / 1000;
 	pidVal = pVal + iVal;
+	// Begrenzung falls PWM-Wert grösser 100% wird
 	if (pidVal > 100) {
 		Motor_SetVelo(100);
 	} else if (pidVal < -100) {
@@ -52,7 +53,7 @@ void PID_Velo(int32_t set_velo){
 	}
 }
 
-// Positionsregler
+// Positionsregler mm
 void PID_Pos(int32_t set_pos){
 	meas_pos = Quad_GetPos();
 	error = set_pos - meas_pos;

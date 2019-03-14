@@ -9,6 +9,7 @@
 #include "stm32f3xx_hal.h"
 #include "velocity.h"
 #include "quad.h"
+#include "motor.h"
 
 int32_t velocity;
 int32_t oldPos;
@@ -29,8 +30,7 @@ int16_t VelCounter = 0;
 // Samples Velocity
 void Velo_Sample(){
 	int32_t newPos = Quad_GetPos();
-	int32_t diffTicks = newPos - oldPos; // Differenzticks zwischen alter und neuer Position
-	int32_t diffDist = (diffTicks * Wirkumfang) / (iGetriebe * TicksPerRev);
+	int32_t diffDist = newPos - oldPos; // Differenzticks zwischen alter und neuer Position
 	velocity = diffDist * Frequency;
 	oldPos = newPos;
 

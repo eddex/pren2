@@ -8,8 +8,8 @@
 #ifndef PID_H_
 #define PID_H_
 
-#define Kp_v 1000 	// P-Anteil Geschwindigkeitsregler
-#define Ki_v 10		// I-Anteil Geschwindigkeitsregler
+#define Kp_v 200 	// P-Anteil Geschwindigkeitsregler
+#define Ki_v 3		// I-Anteil Geschwindigkeitsregler
 //#define Kd_v 10		// D-Anteil Geschwindigkeitsregler
 //#define Aw_v 1		// AntiWindup Geschwindigkeitsregler
 
@@ -22,10 +22,10 @@
 // Init Routine
 void PID_Init();
 
-// Geschwindigkeitsregler U/s
+// Geschwindigkeitsregler mm/s
 void PID_Velo(int32_t set_velo);
 
-// Positionsregler
+// Positionsregler mm
 void PID_Pos(int32_t set_pos);
 
 // Error reset

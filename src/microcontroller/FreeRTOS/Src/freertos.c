@@ -75,7 +75,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define SlowVelo 10 // langsame Geschwindigkeit [mm/s]
+#define SlowVelo 100 // langsame Geschwindigkeit [mm/s]
 #define DistTofToWurfel 100 // Distanz zwischen Tof und Würfel
 #define WurfelLength 50 // Würfellänge
 #define MaxVelo 2000 // maximale Geschwindigkeit [mm/s]
@@ -85,7 +85,7 @@
 #define MaxTrackLength 15000 // maximale Streckenlänge [mm]
 
 
-#define WuerfelerkenneUndLaden_TEST 1
+#define WuerfelerkenneUndLaden_TEST 0
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -396,23 +396,23 @@ void StartTask02(void const * argument)
   {
 	  //Im Main.c gibt es bei der Initialiserung eine Funktion, die Entscheidet, ob dieser Task ausgeführt wird oder nicht
 	  if(getEnableSensorTask() == 1){
-		  if(measureAccel3AxisValues()==TASK_OK){
+		  /*if(measureAccel3AxisValues()==TASK_OK){
 			  testInt = getZValue();
-		  }
+		  }*/
 		  if(measureDistanceValue()==TASK_OK){
 			  testInt = getDistanceValue();
 		  }
-		  txData[0] = (uint8_t) z;
-		  txData[1] = (uint8_t) (getZValue() >> 8);
-		  txData[2] = (uint8_t) (getZValue() & 0xff);
+		  //txData[0] = (uint8_t) z;
+		  //txData[1] = (uint8_t) (getZValue() >> 8);
+		  //txData[2] = (uint8_t) (getZValue() & 0xff);
 
 		  //txData[0] = getDistanceValue();
-		  HAL_UART_Transmit(&huart2, txData, 3, 100);
-		  osDelay(2000);
+		  //HAL_UART_Transmit(&huart2, txData, 3, 100);
+		  osDelay(100);
 	  }
 
 	  else{
-		  osDelay(1000);
+		  osDelay(5000);
 	  }
 
   }
