@@ -35,11 +35,17 @@ if there are errors regarding your execution policy, run powershell as admin and
 
 ## software components
 
-### logging
+### dependency_injection
+This module provides a simple infrastructure for dependency injection. It is based on [Dependency Injection The Python Way](https://github.com/ActiveState/code/blob/master/recipes/Python/413268_Dependency/recipe-413268.py) by Zoran Isailovski 
+
+### fsm
+The finite state machine for the boardcomputer.
+
+### log
 Log files are saved on the boradcomputer and (if connected) sent to an external device over network.
 
-### image recognition
+### signal_recognition
 Different signals have to be recognized alongside the rails.
 
-### communication with the microcontroller
-UART
+### uart_handler
+Implementation of the UART protocol to communicate with the microcontroller.
