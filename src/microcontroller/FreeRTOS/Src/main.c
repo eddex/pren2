@@ -424,7 +424,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   		if(tim15Count10ms == 200){
   			Velo_Sample();
   			tim15Count10ms=0;
-  			setPidEnable(1);										//Enables the PID funciton in freertos.c --> MotorControl
+  			PID_SetEnable(1);										//Enables the PID funciton in freertos.c --> MotorControl
 
   			incrementTimeMeasurmentValue();							//Variable for Timemeasurement
   		}
