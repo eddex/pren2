@@ -79,15 +79,15 @@ void PID_Pos(int32_t set_pos){
 	}
 }
 
-void clearError(){
+void PID_ClearError(){
 	iVal = 0;
 	pVal = 0;
 }
 
-void setPidEnable(uint8_t enableFlag){
+void PID_SetEnable(uint8_t enableFlag){
 	pidSetEnable = enableFlag;
 }
 
-uint8_t getPidEnable(void){
+uint8_t PID_GetEnable(void){
 	return pidSetEnable;
 }

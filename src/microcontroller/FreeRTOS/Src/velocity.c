@@ -19,7 +19,7 @@ void Velo_Init(){
 	oldPos = 0;
 }
 
-// Returns Encoder Velocity in U/s
+// Returns Encoder Velocity in mm/s
 int32_t Velo_GetVelo(){
 	return velocity;
 }
@@ -29,8 +29,9 @@ int16_t VelCounter = 0;
 // Samples Velocity
 void Velo_Sample(){
 	int32_t newPos = Quad_GetPos();
-	int32_t diff = newPos - oldPos;
-	velocity = (diff * 100) / 48;
+	int32_t diffTicks = newPos - oldPos; // Differenzticks zwischen alter und neuer Position
+	int32_t diffDist = (diffTicks * Wirkumfang) / (iGetriebe * TicksPerRev);
+	velocity = diffDist * Frequency;
 	oldPos = newPos;
 
 	log_velo[VelCounter] = velocity;

@@ -449,9 +449,9 @@ void StartTask03(void const * argument)
 	  		  }
 
 	  		  else{													//Drive with UART1 received pwmValue
-	  			  if(getPidEnable()==1){
+	  			  if(PID_GetEnable()==1){
 	  				  PID_Velo((-1)*getfinalVelocity());
-	  				  setPidEnable(0);
+	  				  PID_SetEnable(0);
 	  			  }
 	  		  }
 	  	  }
@@ -471,9 +471,9 @@ void StartTask03(void const * argument)
 	  		 else{												//Drive with UART1 received pwmVlue
 
 	  				  //Nur alle 10ms!
-	  			if(getPidEnable()==1){
+	  			if(PID_GetEnable()==1){
 	  				  PID_Velo(getfinalVelocity());
-	  				  setPidEnable(0);
+	  				  PID_SetEnable(0);
 	  			  }
 	  		  }
 	  		}

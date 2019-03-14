@@ -29,11 +29,11 @@ void PID_Velo(int32_t set_velo);
 void PID_Pos(int32_t set_pos);
 
 // Error reset
-void clearError();
+void PID_ClearError();
 
 //Für Zugriff auf Variable vom Main aus und FreeRTOS
-void setPidEnable(uint8_t);
-uint8_t getPidEnable(void);
+void PID_SetEnable(uint8_t);
+uint8_t PID_GetEnable(void);
 
 
 #endif /* PID_H_ */
