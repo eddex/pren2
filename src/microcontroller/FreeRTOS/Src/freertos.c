@@ -100,6 +100,7 @@ osThreadId defaultTaskHandle;
 osThreadId SensorTaskHandle;
 osThreadId UartRadioTaskHandle;
 osThreadId ServoTaskHandle;
+osSemaphoreId myBinarySem01Handle;
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -125,6 +126,11 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
   /* USER CODE END RTOS_MUTEX */
+
+  /* Create the semaphores(s) */
+  /* definition and creation of myBinarySem01 */
+  osSemaphoreDef(myBinarySem01);
+  myBinarySem01Handle = osSemaphoreCreate(osSemaphore(myBinarySem01), 1);
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
@@ -169,6 +175,7 @@ void MX_FREERTOS_Init(void) {
 /* USER CODE END Header_StartDefaultTask */
 void StartDefaultTask(void const * argument)
 {
+
   /* USER CODE BEGIN StartDefaultTask */
   enum fsm fsm_state; // create enum for statemachine task
   fsm_state = STARTUP; // Default State -> Startup
@@ -184,7 +191,7 @@ void StartDefaultTask(void const * argument)
   uint32_t accCtr = 0; // Zähler um Motoren langsam zu beschleunigen
 
   uint8_t servoAngle = 0; // Winkelmerker Servo
-  uint8_t speed = 0; // Geschwindigkeit der Motoren
+  uint16_t speed = 0; // Geschwindigkeit der Motoren
 
   /* Infinite loop */
   for(;;)
@@ -400,7 +407,7 @@ void StartTask02(void const * argument)
 			  testInt = getZValue();
 		  }*/
 		  if(measureDistanceValue()==TASK_OK){
-			  testInt = getDistanceValue();
+				testInt = getDistanceValue();
 		  }
 		  //txData[0] = (uint8_t) z;
 		  //txData[1] = (uint8_t) (getZValue() >> 8);

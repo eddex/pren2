@@ -10,6 +10,7 @@
 #include "gpio.h"
 #include "usart.h"
 #include "AccelSens_MMA8451.h"
+#include "RadioModule.h"
 
 uint8_t sendFlag = 0;				//Sendflag decide which AccelSens Axis value will be sent (Range from 1-5)
 uint8_t speedGroupValue = 0;

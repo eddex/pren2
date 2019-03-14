@@ -352,17 +352,17 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 
 #if FunkFernsteuer_BoardcomputerBetrieb
 
-	HAL_UART_Receive_IT(&huart1, rx_dataUART1_RadioModule, 1);									//Restart Interrupt reception mode
+	HAL_UART_Receive_IT(&huart1, rx_dataUART1_RadioModule, 1);						//Restart Interrupt reception mode
 
-	if(rx_dataUART1_RadioModule[0]>47 && rx_dataUART1_RadioModule[0]<56){									//rx_dataUART1_RadioModule with the received values between 48 an 55
-		receivedSpeedValue = rx_dataUART1_RadioModule[0]-48;									//Speed group 0 - 7
+	if(rx_dataUART1_RadioModule[0]>47 && rx_dataUART1_RadioModule[0]<56){			//rx_dataUART1_RadioModule with the received values between 48 an 55
+		receivedSpeedValue = rx_dataUART1_RadioModule[0]-48;						//Speed group 0 - 7
 		setSpeedGroupValue(receivedSpeedValue);										//Store Speedgroupvalue, used in ServoMotorTask
 		//pwmValue = (uint16_t)((Timer3MaxCounterPeriod/7)*receivedSpeedValue);		//Final PWM Value from 0(0% duty cycle) to 20000(100% duty cycle);
 	}
 
 	//Über Funkmodul erhaltener Wert ist kein Geschwindigkeitswert sonder für die Drehrichtung
 	else {
-		setDrehrichtung(rx_dataUART1_RadioModule[0]);											//Valid Values: 108 /114
+		setDrehrichtung(rx_dataUART1_RadioModule[0]);								//Valid Values: 108 /114
 	}
 
 	//Depending on Speedgroup (0-7) calculate the Motorvelocity in u/s
