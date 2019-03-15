@@ -40,6 +40,9 @@ if there are errors regarding your execution policy, run powershell as admin and
 
 ## software components
 
+### camera
+Takes pictures with the camera attached to the Raspberry Pi board.
+
 ### fsm
 The finite state machine for the boardcomputer.
 
