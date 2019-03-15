@@ -13,7 +13,8 @@
 
 uint8_t pidSetEnable = 0;
 
-int32_t meas_velo;
+int32_t set_velo_ticks = 0;
+int32_t meas_velo_ticks;
 int32_t integral_v;
 int32_t meas_pos;
 int32_t integral_p;
@@ -34,11 +35,12 @@ void PID_Init(){
 	pidVal = 0;
 }
 
-
 // Geschwindigkeitsregler mm/s
 void PID_Velo(int32_t set_velo){
-	meas_velo = Velo_GetVelo();
-	error = set_velo - meas_velo;
+	set_velo_ticks =  (set_velo * iGetriebe * TicksPerRev) / Wirkumfang;
+
+	meas_velo_ticks = Velo_GetVelo();
+	error = set_velo_ticks - meas_velo_ticks;
 	pVal = (Kp_v * error) / 1000;
 	integral_v += error;
 	iVal = (Ki_v * integral_v) / 1000;

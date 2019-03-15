@@ -11,7 +11,7 @@
 // Init Routine
 void Velo_Init();
 
-// Returns Encoder Velocity in mm/s
+// Returns Encoder Velocity in ticks/s
 int32_t Velo_GetVelo();
 
 // Samples Velocity
