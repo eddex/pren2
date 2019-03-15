@@ -16,7 +16,7 @@ enum quad_e{
 // Init Routine
 void Quad_Init();
 
-// Returns Encoder Position mm
+// Returns Encoder Position
 int32_t Quad_GetPos();
 
 // Samples Encoder
