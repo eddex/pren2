@@ -46,6 +46,9 @@ Takes pictures with the camera attached to the Raspberry Pi board.
 ### fsm
 The finite state machine for the boardcomputer.
 
+### image_analysis
+Analyze images to find different types of signals including start, stop and info signals.
+
 ### log
 Log files are saved on the boradcomputer and (if connected) sent to an external device over network.
 
