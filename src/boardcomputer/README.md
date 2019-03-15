@@ -28,15 +28,17 @@ if there are errors regarding your execution policy, run powershell as admin and
 - file names for tests must start with `test_` otherwise the tests are not found by pytest
 - test methods must start with `test_` otherwise the tests are not found by pytest
 
+### mocks
+- all other modules must be mocked in unit tests. to achieve this, one might need to replace imported modules with mocks.
+- how to mock imports: https://stackoverflow.com/questions/8658043/how-to-mock-an-import
+- general introduction to mocks: http://www.drdobbs.com/testing/using-mocks-in-python/240168251
+
 ## coding style
 - the [google python style guide](https://github.com/google/styleguide/blob/gh-pages/pyguide.md) is used for this project
 - `yapf` can be used for auto formatting: https://github.com/google/yapf/#installation
 - to setup pylint in PyCharm follow [this guide on stackoverflow](https://stackoverflow.com/questions/38134086/how-to-run-pylint-with-pycharm)
 
 ## software components
-
-### dependency_injection
-This module provides a simple infrastructure for dependency injection. It is based on [Dependency Injection The Python Way](https://github.com/ActiveState/code/blob/master/recipes/Python/413268_Dependency/recipe-413268.py) by Zoran Isailovski 
 
 ### fsm
 The finite state machine for the boardcomputer.
