@@ -14,20 +14,24 @@
 uint8_t pidSetEnable = 0;
 
 int32_t set_velo_ticks = 0;
-int32_t meas_velo_ticks;
-int32_t integral_v;
-int32_t meas_pos;
-int32_t integral_p;
-int32_t error;
-int32_t pVal;
-int32_t iVal;
-int32_t pidVal;
+int32_t meas_velo_ticks = 0;
+int32_t integral_v = 0;
+int32_t set_pos_ticks = 0;
+int32_t meas_pos_ticks = 0;
+int32_t integral_p = 0;
+int32_t error = 0;
+int32_t pVal = 0;
+int32_t iVal = 0;
+int32_t pidVal = 0;
 
 // Init Routine
 void PID_Init(){
-	meas_velo = 0;
+	pidSetEnable = 0;
+	set_velo_ticks = 0;
+	meas_velo_ticks = 0;
 	integral_v = 0;
-	meas_pos = 0;
+	set_pos_ticks = 0;
+	meas_pos_ticks = 0;
 	integral_p = 0;
 	error = 0;
 	pVal = 0;
@@ -43,6 +47,12 @@ void PID_Velo(int32_t set_velo){
 	error = set_velo_ticks - meas_velo_ticks;
 	pVal = (Kp_v * error) / 1000;
 	integral_v += error;
+	// Anti Reset Windup
+	if(integral_v >= Aw_v){
+		integral_v = Aw_v;
+	} else if(integral_v <= Aw_v){
+		integral_v = -Aw_v;
+	}
 	iVal = (Ki_v * integral_v) / 1000;
 	pidVal = pVal + iVal;
 	// Begrenzung falls PWM-Wert grösser 100% wird
@@ -57,11 +67,13 @@ void PID_Velo(int32_t set_velo){
 
 // Positionsregler mm
 void PID_Pos(int32_t set_pos){
-	meas_pos = Quad_GetPos();
-	error = set_pos - meas_pos;
+	set_pos_ticks = (set_pos * iGetriebe * TicksPerRev) / Wirkumfang;
+
+	meas_pos_ticks = Quad_GetPos();
+	error = set_pos_ticks - meas_pos_ticks;
 	pVal = (Kp_p * error) / 1000;
 	integral_p += error;
-	// Anti-Windup
+	// Anti Reset Windup
 	if(integral_p >= Aw_p){
 		integral_p = Aw_p;
 	} else if(integral_p <= -Aw_p){
@@ -83,8 +95,8 @@ void PID_Pos(int32_t set_pos){
 }
 
 void PID_ClearError(){
-	iVal = 0;
-	pVal = 0;
+	integral_v = 0;
+	integral_p = 0;
 }
 
 void PID_SetEnable(uint8_t enableFlag){
