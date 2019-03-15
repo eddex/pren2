@@ -10,13 +10,13 @@
 
 #define Kp_v 200 	// P-Anteil Geschwindigkeitsregler
 #define Ki_v 3		// I-Anteil Geschwindigkeitsregler
-//#define Kd_v 10		// D-Anteil Geschwindigkeitsregler
-//#define Aw_v 1		// AntiWindup Geschwindigkeitsregler
+//#define Kd_v 10	// D-Anteil Geschwindigkeitsregler
+#define Aw_v 10000	// Anti Reset Windup Geschwindigkeitsregler
 
 #define Kp_p 100	// P-Anteil Positionsregler
 #define Ki_p 10		// I-Anteil Positionsregler
-//#define Kd_p 10		// D-Anteil Positionsregler
-#define Aw_p 2000	// AntiWindup Positionsregler
+//#define Kd_p 10	// D-Anteil Positionsregler
+#define Aw_p 2000	// Anti Rese Windup Positionsregler
 #define MAX_VELO 60	// Maximaler Speed für Positionsregler
 
 // Init Routine

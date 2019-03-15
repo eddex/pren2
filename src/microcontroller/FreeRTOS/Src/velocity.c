@@ -20,7 +20,7 @@ void Velo_Init(){
 	oldPos = 0;
 }
 
-// Returns Encoder Velocity in mm/s
+// Returns Encoder Velocity in ticks/s
 int32_t Velo_GetVelo(){
 	return velocity;
 }
