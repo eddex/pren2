@@ -26,6 +26,8 @@
 //enum stateOfTask taskState;
 uint16_t storeTimeValue= 0;
 volatile uint8_t debugDistanceValue = 0;
+uint8_t storeDistanceValue = 0;
+uint8_t storeTimeMeasurement = 0;
 
 taskState_t wurfel_erkennen(void){
 
@@ -35,10 +37,16 @@ taskState_t wurfel_erkennen(void){
 
 
 	//Vorwärts fahren und auf Würfelekrennung warten, Abbruch nach 15s nichts erkennen
-	while((getDistanceValue() > 60 && getTimeMeasurement()<1500) || (getDistanceValue()<5)){		//OR Abfrage, da Sensor zu beginn manchmal 0 zurückliefert
+	/*while((getDistanceValue() > 60 && getTimeMeasurement()<1500) || (getDistanceValue()<5)){		//OR Abfrage, da Sensor zu beginn manchmal 0 zurückliefert
 		storeTimeValue=getTimeMeasurement();
 		debugDistanceValue = getDistanceValue();
-	}
+	}*/
+
+	do{
+		storeDistanceValue = getDistanceValue();
+		storeTimeMeasurement = getTimeMeasurement();
+	}while((storeDistanceValue>60&&storeTimeMeasurement<1500) || (storeDistanceValue<5));
+
 	Motor_Break();													//Motoren stoppen wenn Distanz zum Würfel im Bereich von x (mm) - y (mm) ist ODER Time overflow
 
 	if(storeTimeValue>=1499){return TASK_TIME_OVERFLOW;}

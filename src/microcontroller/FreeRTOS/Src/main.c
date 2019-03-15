@@ -154,7 +154,7 @@ int main(void)
   Motor_Init();
 
   //Configuration of TaskEnable
-  setEnableSensorTask(0);										//Enable = 1 / Disable= 0 -> SensorTask
+  setEnableSensorTask(1);										//Enable = 1 / Disable= 0 -> SensorTask
 
   //If Sensortask enabled
   if(getEnableSensorTask() == 1){

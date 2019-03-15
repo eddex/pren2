@@ -393,10 +393,10 @@ void StartDefaultTask(void const * argument)
 void StartTask02(void const * argument)
 {
   /* USER CODE BEGIN StartTask02 */
-  uint8_t txData[3];
+  //uint8_t txData[3];
   //char x = 'x';
   //char y = 'y';
-  char z = 'z';
+  //char z = 'z';
   volatile uint16_t testInt;
   /* Infinite loop */
   for(;;)
@@ -407,7 +407,7 @@ void StartTask02(void const * argument)
 			  testInt = getZValue();
 		  }*/
 		  if(measureDistanceValue()==TASK_OK){
-				testInt = getDistanceValue();
+				//testInt = getDistanceValue();
 		  }
 		  //txData[0] = (uint8_t) z;
 		  //txData[1] = (uint8_t) (getZValue() >> 8);
@@ -518,13 +518,21 @@ void StartTask04(void const * argument)
 	   * 90°	=> 1.9ms (PWM_Value = 19 * (480'000Counts / 200) = 45'600
 	 */
 
+	uint8_t enableTask = 0;
   uint16_t servoPWM = 0;
 
   for(;;)
   {
-	  servoPWM = 26400 + getSpeedGroupValue()*2740;
-	  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, servoPWM);
-	  osDelay(10);
+	  if(enableTask ==1){
+		  servoPWM = 26400 + getSpeedGroupValue()*2740;
+		  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, servoPWM);
+		  osDelay(10);
+	  }
+
+	  else{
+		  osDelay(5000);
+	  }
+
   }
   /* USER CODE END StartTask04 */
 }

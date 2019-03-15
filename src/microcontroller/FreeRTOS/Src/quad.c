@@ -45,7 +45,7 @@ void Quad_Init(){
 int32_t Quad_GetPos(){
 	int32_t position;
 	position = (ticks * Wirkumfang) / (iGetriebe * TicksPerRev);
-	return position;
+	return position;ss
 }
 
 // Samples Encoder
