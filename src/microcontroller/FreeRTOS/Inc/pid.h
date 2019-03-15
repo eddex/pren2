@@ -8,8 +8,8 @@
 #ifndef PID_H_
 #define PID_H_
 
-#define Kp_v 200 	// P-Anteil Geschwindigkeitsregler
-#define Ki_v 3		// I-Anteil Geschwindigkeitsregler
+#define Kp_v 20 	// P-Anteil Geschwindigkeitsregler
+#define Ki_v 5		// I-Anteil Geschwindigkeitsregler
 //#define Kd_v 10	// D-Anteil Geschwindigkeitsregler
 #define Aw_v 10000	// Anti Reset Windup Geschwindigkeitsregler
 

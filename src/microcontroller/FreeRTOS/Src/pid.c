@@ -41,16 +41,22 @@ void PID_Init(){
 
 // Geschwindigkeitsregler mm/s
 void PID_Velo(int32_t set_velo){
-	set_velo_ticks =  (set_velo * iGetriebe * TicksPerRev) / Wirkumfang;
+	set_velo_ticks =  (set_velo * iGetriebe * TicksPerRev) / (Wirkumfang);
 
 	meas_velo_ticks = Velo_GetVelo();
 	error = set_velo_ticks - meas_velo_ticks;
 	pVal = (Kp_v * error) / 1000;
+
+	// Falls Geschwindigkeit 0 sein soll und 0 ist
+	if(set_velo_ticks == 0 && meas_velo_ticks == 0){
+		integral_v = 0;
+	}
+
 	integral_v += error;
 	// Anti Reset Windup
 	if(integral_v >= Aw_v){
 		integral_v = Aw_v;
-	} else if(integral_v <= Aw_v){
+	} else if(integral_v <= -Aw_v){
 		integral_v = -Aw_v;
 	}
 	iVal = (Ki_v * integral_v) / 1000;
@@ -67,7 +73,7 @@ void PID_Velo(int32_t set_velo){
 
 // Positionsregler mm
 void PID_Pos(int32_t set_pos){
-	set_pos_ticks = (set_pos * iGetriebe * TicksPerRev) / Wirkumfang;
+	set_pos_ticks = (set_pos * iGetriebe * TicksPerRev) / (Wirkumfang);
 
 	meas_pos_ticks = Quad_GetPos();
 	error = set_pos_ticks - meas_pos_ticks;
