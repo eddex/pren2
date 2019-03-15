@@ -11,7 +11,7 @@ class SignalType(Enum):
     UNDEFINED = 3
 
 
-class RecognizedNumber(Enum):
+class SignalNumber(Enum):
     """
     Possible Numbers that can be found on the signals.
     """
@@ -33,16 +33,16 @@ class AnalysisOutcome:
     Contains the information found in an image.
     """
     signal_type: SignalType
-    recognized_number: RecognizedNumber
+    signal_number: SignalNumber
 
-    def __init__(self, recognized_number: RecognizedNumber, signal_type: SignalType):
+    def __init__(self, signal_type: SignalType, signal_number: SignalNumber):
         """
         Args:
-            recognized_number (RecognizedNumber)
             signal_type (SignalType)
+            signal_number (SignalNumber)
         """
-        self.recognized_number = recognized_number
         self.signal_type = signal_type
+        self.signal_number = signal_number
 
 
 def analyze_image(image):
@@ -55,4 +55,4 @@ def analyze_image(image):
         The outcome of the image analysis as an AnalysisOutcome.
     """
     # TODO: implement image analysis logic.
-    return AnalysisOutcome(RecognizedNumber.UNDEFINED, SignalType.UNDEFINED)
+    return AnalysisOutcome(SignalType.UNDEFINED, SignalNumber.UNDEFINED)
