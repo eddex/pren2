@@ -10,9 +10,13 @@
 #include "stm32f3xx_hal.h"
 #include "i2c.h"
 #include "gpio.h"
+#include "FreeRTOS.h"
+#include "cmsis_os.h"
 
 #include "DistSens_VL6180X.h"
 taskState_t distTaskState;
+
+extern SemaphoreHandle_t myBinarySem01Handle;
 
 uint8_t dataBuffer[] ={0,0};
 
@@ -174,5 +178,7 @@ taskState_t measureDistanceValue(void){
 
 
 int8_t getDistanceValue(void){
+	osSemaphoreWait(myBinarySem01Handle, 200);
 	return distanceValue;
+	osSemaphoreRelease(myBinarySem01Handle);
 }

@@ -73,3 +73,6 @@ __pycache__
 
 # logfiles
 *.log
+
+# jupyter notebook
+.ipynb_checkpoints

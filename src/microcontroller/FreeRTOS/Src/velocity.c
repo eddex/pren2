@@ -9,6 +9,7 @@
 #include "stm32f3xx_hal.h"
 #include "velocity.h"
 #include "quad.h"
+#include "motor.h"
 
 int32_t velocity;
 int32_t oldPos;
@@ -19,7 +20,7 @@ void Velo_Init(){
 	oldPos = 0;
 }
 
-// Returns Encoder Velocity in U/s
+// Returns Encoder Velocity in ticks/s
 int32_t Velo_GetVelo(){
 	return velocity;
 }
@@ -29,8 +30,8 @@ int16_t VelCounter = 0;
 // Samples Velocity
 void Velo_Sample(){
 	int32_t newPos = Quad_GetPos();
-	int32_t diff = newPos - oldPos;
-	velocity = (diff * 100) / 48;
+	int32_t diffDist = newPos - oldPos; // Differenzticks zwischen alter und neuer Position
+	velocity = diffDist * Frequency;
 	oldPos = newPos;
 
 	log_velo[VelCounter] = velocity;

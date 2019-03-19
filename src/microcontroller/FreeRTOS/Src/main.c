@@ -69,7 +69,7 @@
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-#define FunkFernsteuer_BoardcomputerBetrieb 0			//0 --> Boardcomputer / 1 --> Funkfernsteuerung
+#define FunkFernsteuer_BoardcomputerBetrieb 1			//0 --> Boardcomputer / 1 --> Funkfernsteuerung
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -159,7 +159,7 @@ int main(void)
   //If Sensortask enabled
   if(getEnableSensorTask() == 1){
 	  VL6180X_Init();											//Init of VL6180X Distance Sensor Device
-	  MMA8451_Init();											//Init of MMA8451 Accel Sensor Device
+	  //MMA8451_Init();											//Init of MMA8451 Accel Sensor Device
   }
 
   /*
@@ -352,17 +352,17 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 
 #if FunkFernsteuer_BoardcomputerBetrieb
 
-	HAL_UART_Receive_IT(&huart1, rx_dataUART1_RadioModule, 1);									//Restart Interrupt reception mode
+	HAL_UART_Receive_IT(&huart1, rx_dataUART1_RadioModule, 1);						//Restart Interrupt reception mode
 
-	if(rx_dataUART1_RadioModule[0]>47 && rx_dataUART1[0]<56){									//rx_dataUART1_RadioModule with the received values between 48 an 55
-		receivedSpeedValue = rx_dataUART1[0]-48;									//Speed group 0 - 7
+	if(rx_dataUART1_RadioModule[0]>47 && rx_dataUART1_RadioModule[0]<56){			//rx_dataUART1_RadioModule with the received values between 48 an 55
+		receivedSpeedValue = rx_dataUART1_RadioModule[0]-48;						//Speed group 0 - 7
 		setSpeedGroupValue(receivedSpeedValue);										//Store Speedgroupvalue, used in ServoMotorTask
 		//pwmValue = (uint16_t)((Timer3MaxCounterPeriod/7)*receivedSpeedValue);		//Final PWM Value from 0(0% duty cycle) to 20000(100% duty cycle);
 	}
 
 	//Über Funkmodul erhaltener Wert ist kein Geschwindigkeitswert sonder für die Drehrichtung
 	else {
-		setDrehrichtung(rx_dataUART1_RadioModule[0]);											//Valid Values: 108 /114
+		setDrehrichtung(rx_dataUART1_RadioModule[0]);								//Valid Values: 108 /114
 	}
 
 	//Depending on Speedgroup (0-7) calculate the Motorvelocity in u/s
@@ -370,13 +370,25 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 		setfinalVelocity(0);
 	}
 	else if (receivedSpeedValue == 1){
-		setfinalVelocity(receivedSpeedValue * 12);
+		setfinalVelocity(100);
 	}
-	else if(receivedSpeedValue < 7){
-		setfinalVelocity((receivedSpeedValue * 12) + (2^(receivedSpeedValue-1)));
+	else if (receivedSpeedValue == 2){
+		setfinalVelocity(150);
+	}
+	else if (receivedSpeedValue == 3){
+		setfinalVelocity(200);
+	}
+	else if (receivedSpeedValue == 4){
+		setfinalVelocity(300);
+	}
+	else if (receivedSpeedValue == 5){
+		setfinalVelocity(400);
+	}
+	else if (receivedSpeedValue == 6){
+		setfinalVelocity(500);
 	}
 	else{
-		setfinalVelocity(155);
+		setfinalVelocity(700);
 	}
 
 
@@ -424,7 +436,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   		if(tim15Count10ms == 200){
   			Velo_Sample();
   			tim15Count10ms=0;
-  			setPidEnable(1);										//Enables the PID funciton in freertos.c --> MotorControl
+  			PID_SetEnable(1);										//Enables the PID funciton in freertos.c --> MotorControl
 
   			incrementTimeMeasurmentValue();							//Variable for Timemeasurement
   		}

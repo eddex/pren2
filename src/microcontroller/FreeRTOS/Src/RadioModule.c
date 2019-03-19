@@ -10,6 +10,7 @@
 #include "gpio.h"
 #include "usart.h"
 #include "AccelSens_MMA8451.h"
+#include "RadioModule.h"
 
 uint8_t sendFlag = 0;				//Sendflag decide which AccelSens Axis value will be sent (Range from 1-5)
 uint8_t speedGroupValue = 0;
@@ -19,7 +20,7 @@ char c;								//Wird für UART Funkprotokoll verwendet. Kann Char "x", "y" oder 
 uint8_t tx_dataUART1[] = {0,0};		//Send Data Buffer for Data Transfer to PIC
 
 
-uint8_t finalVelocity = 0;
+uint16_t finalVelocity = 0;
 uint8_t drehrichtung = 0;			//Value is sent by radioControl Modul --> Reverse / Forward
 
 
@@ -32,11 +33,11 @@ void setDrehrichtung(uint8_t uart_drehrichtung){
 	drehrichtung = uart_drehrichtung;
 }
 
-uint8_t getfinalVelocity(void){
+uint16_t getfinalVelocity(void){
 	return finalVelocity;
 }
 
-void setfinalVelocity(uint8_t velocity){
+void setfinalVelocity(uint16_t velocity){
 	finalVelocity = velocity;
 }
 

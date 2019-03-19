@@ -28,13 +28,29 @@ if there are errors regarding your execution policy, run powershell as admin and
 - file names for tests must start with `test_` otherwise the tests are not found by pytest
 - test methods must start with `test_` otherwise the tests are not found by pytest
 
+### mocks
+- in unit tests all modules except for the one under test must be mocked. to achieve this, one might need to replace imported modules with mocks.
+- how to mock imports: https://stackoverflow.com/questions/8658043/how-to-mock-an-import
+- general introduction to mocks: http://www.drdobbs.com/testing/using-mocks-in-python/240168251
+
+## coding style
+- the [google python style guide](https://github.com/google/styleguide/blob/gh-pages/pyguide.md) is used for this project
+- `yapf` can be used for auto formatting: https://github.com/google/yapf/#installation
+- to setup pylint in PyCharm follow [this guide on stackoverflow](https://stackoverflow.com/questions/38134086/how-to-run-pylint-with-pycharm)
+
 ## software components
 
-### logging
+### camera
+Takes pictures with the camera attached to the Raspberry Pi board.
+
+### fsm
+The finite state machine for the boardcomputer.
+
+### image_analysis
+Analyze images to find different types of signals including start, stop and info signals.
+
+### log
 Log files are saved on the boradcomputer and (if connected) sent to an external device over network.
 
-### image recognition
-Different signals have to be recognized alongside the rails.
-
-### communication with the microcontroller
-UART
+### uart_handler
+Implementation of the UART protocol to communicate with the microcontroller.

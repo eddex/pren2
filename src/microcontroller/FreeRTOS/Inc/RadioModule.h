@@ -12,8 +12,8 @@
 void sendSensorDatatoRadioModule(void);
 uint8_t getDrehrichtung(void);
 void setDrehrichtung(uint8_t);
-uint8_t getfinalVelocity(void);
-void setfinalVelocity(uint8_t);
+uint16_t getfinalVelocity(void);
+void setfinalVelocity(uint16_t);
 
 uint8_t getSpeedGroupValue(void);
 void setSpeedGroupValue(uint8_t groupValue);

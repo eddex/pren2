@@ -75,7 +75,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define SlowVelo 10 // langsame Geschwindigkeit [mm/s]
+#define SlowVelo 100 // langsame Geschwindigkeit [mm/s]
 #define DistTofToWurfel 100 // Distanz zwischen Tof und Würfel
 #define WurfelLength 50 // Würfellänge
 #define MaxVelo 2000 // maximale Geschwindigkeit [mm/s]
@@ -85,7 +85,7 @@
 #define MaxTrackLength 15000 // maximale Streckenlänge [mm]
 
 
-#define WuerfelerkenneUndLaden_TEST 1
+#define WuerfelerkenneUndLaden_TEST 0
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -100,6 +100,7 @@ osThreadId defaultTaskHandle;
 osThreadId SensorTaskHandle;
 osThreadId UartRadioTaskHandle;
 osThreadId ServoTaskHandle;
+osSemaphoreId myBinarySem01Handle;
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -125,6 +126,11 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
   /* USER CODE END RTOS_MUTEX */
+
+  /* Create the semaphores(s) */
+  /* definition and creation of myBinarySem01 */
+  osSemaphoreDef(myBinarySem01);
+  myBinarySem01Handle = osSemaphoreCreate(osSemaphore(myBinarySem01), 1);
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
@@ -169,6 +175,7 @@ void MX_FREERTOS_Init(void) {
 /* USER CODE END Header_StartDefaultTask */
 void StartDefaultTask(void const * argument)
 {
+
   /* USER CODE BEGIN StartDefaultTask */
   enum fsm fsm_state; // create enum for statemachine task
   fsm_state = STARTUP; // Default State -> Startup
@@ -184,7 +191,7 @@ void StartDefaultTask(void const * argument)
   uint32_t accCtr = 0; // Zähler um Motoren langsam zu beschleunigen
 
   uint8_t servoAngle = 0; // Winkelmerker Servo
-  uint8_t speed = 0; // Geschwindigkeit der Motoren
+  uint16_t speed = 0; // Geschwindigkeit der Motoren
 
   /* Infinite loop */
   for(;;)
@@ -386,33 +393,33 @@ void StartDefaultTask(void const * argument)
 void StartTask02(void const * argument)
 {
   /* USER CODE BEGIN StartTask02 */
-  uint8_t txData[3];
+  //uint8_t txData[3];
   //char x = 'x';
   //char y = 'y';
-  char z = 'z';
+  //char z = 'z';
   volatile uint16_t testInt;
   /* Infinite loop */
   for(;;)
   {
 	  //Im Main.c gibt es bei der Initialiserung eine Funktion, die Entscheidet, ob dieser Task ausgeführt wird oder nicht
 	  if(getEnableSensorTask() == 1){
-		  if(measureAccel3AxisValues()==TASK_OK){
+		  /*if(measureAccel3AxisValues()==TASK_OK){
 			  testInt = getZValue();
-		  }
+		  }*/
 		  if(measureDistanceValue()==TASK_OK){
-			  testInt = getDistanceValue();
+				//testInt = getDistanceValue();
 		  }
-		  txData[0] = (uint8_t) z;
-		  txData[1] = (uint8_t) (getZValue() >> 8);
-		  txData[2] = (uint8_t) (getZValue() & 0xff);
+		  //txData[0] = (uint8_t) z;
+		  //txData[1] = (uint8_t) (getZValue() >> 8);
+		  //txData[2] = (uint8_t) (getZValue() & 0xff);
 
 		  //txData[0] = getDistanceValue();
-		  HAL_UART_Transmit(&huart2, txData, 3, 100);
-		  osDelay(2000);
+		  //HAL_UART_Transmit(&huart2, txData, 3, 100);
+		  osDelay(100);
 	  }
 
 	  else{
-		  osDelay(1000);
+		  osDelay(5000);
 	  }
 
   }
@@ -449,9 +456,9 @@ void StartTask03(void const * argument)
 	  		  }
 
 	  		  else{													//Drive with UART1 received pwmValue
-	  			  if(getPidEnable()==1){
+	  			  if(PID_GetEnable()==1){
 	  				  PID_Velo((-1)*getfinalVelocity());
-	  				  setPidEnable(0);
+	  				  PID_SetEnable(0);
 	  			  }
 	  		  }
 	  	  }
@@ -471,9 +478,9 @@ void StartTask03(void const * argument)
 	  		 else{												//Drive with UART1 received pwmVlue
 
 	  				  //Nur alle 10ms!
-	  			if(getPidEnable()==1){
+	  			if(PID_GetEnable()==1){
 	  				  PID_Velo(getfinalVelocity());
-	  				  setPidEnable(0);
+	  				  PID_SetEnable(0);
 	  			  }
 	  		  }
 	  		}
@@ -511,13 +518,21 @@ void StartTask04(void const * argument)
 	   * 90°	=> 1.9ms (PWM_Value = 19 * (480'000Counts / 200) = 45'600
 	 */
 
+	uint8_t enableTask = 0;
   uint16_t servoPWM = 0;
 
   for(;;)
   {
-	  servoPWM = 26400 + getSpeedGroupValue()*2740;
-	  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, servoPWM);
-	  osDelay(10);
+	  if(enableTask ==1){
+		  servoPWM = 26400 + getSpeedGroupValue()*2740;
+		  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, servoPWM);
+		  osDelay(10);
+	  }
+
+	  else{
+		  osDelay(5000);
+	  }
+
   }
   /* USER CODE END StartTask04 */
 }

@@ -1,6 +1,7 @@
 #MicroXplorer Configuration settings - do not modify
+FREERTOS.BinarySemaphores01=myBinarySem01,Dynamic,NULL
 FREERTOS.FootprintOK=true
-FREERTOS.IPParameters=Tasks01,FootprintOK,configTOTAL_HEAP_SIZE
+FREERTOS.IPParameters=Tasks01,FootprintOK,configTOTAL_HEAP_SIZE,BinarySemaphores01
 FREERTOS.Tasks01=defaultTask,0,128,StartDefaultTask,Default,NULL,Dynamic,NULL,NULL;SensorTask,0,128,StartTask02,Default,NULL,Dynamic,NULL,NULL;UartRadioTask,0,128,StartTask03,Default,NULL,Dynamic,NULL,NULL;ServoTask,0,128,StartTask04,Default,NULL,Dynamic,NULL,NULL
 FREERTOS.configTOTAL_HEAP_SIZE=6144
 File.Version=6
