@@ -85,7 +85,7 @@
 #define MaxTrackLength 15000 // maximale Streckenlänge [mm]
 
 
-#define WuerfelerkenneUndLaden_TEST 0
+#define WuerfelerkenneUndLaden_TEST 1
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -222,9 +222,11 @@ void StartDefaultTask(void const * argument)
 		if(wurfel_erkennen()==TASK_OK){
 			posWurfel = Quad_GetPos();
 			fsm_state = WURFEL_VORFAHREN;
+			HAL_GPIO_WritePin(LED_Heartbeat_GPIO_Port, LED_Heartbeat_Pin, GPIO_PIN_SET);
 		}
 		else{ // Würfel nicht erkannt
 			fsm_state = STARTPOSITION;
+			HAL_GPIO_WritePin(LED_Heartbeat_GPIO_Port, LED_Heartbeat_Pin, GPIO_PIN_SET);
 		}
 		break;
 
@@ -397,7 +399,7 @@ void StartTask02(void const * argument)
   //char x = 'x';
   //char y = 'y';
   //char z = 'z';
-  volatile uint16_t testInt;
+  uint8_t testInt;
   /* Infinite loop */
   for(;;)
   {
@@ -407,7 +409,10 @@ void StartTask02(void const * argument)
 			  testInt = getZValue();
 		  }*/
 		  if(measureDistanceValue()==TASK_OK){
-				//testInt = getDistanceValue();
+				testInt = getDistanceValue();
+				if(testInt <60){
+					__NOP();
+				}
 		  }
 		  //txData[0] = (uint8_t) z;
 		  //txData[1] = (uint8_t) (getZValue() >> 8);
@@ -415,7 +420,7 @@ void StartTask02(void const * argument)
 
 		  //txData[0] = getDistanceValue();
 		  //HAL_UART_Transmit(&huart2, txData, 3, 100);
-		  osDelay(100);
+		  osDelay(10);
 	  }
 
 	  else{
@@ -438,9 +443,13 @@ void StartTask03(void const * argument)
   /* USER CODE BEGIN StartTask03 */
 	uint8_t firstForwardCount =0;		//Bremst motor vor Seitenwechsel
 	uint8_t firstReverseCount = 0;		//dito
+
+	uint8_t enableTask = 0;
   /* Infinite loop */
   for(;;)
   {
+
+	  if(enableTask == 1){
 
 	  	  //Drehrichtung FORWARD
 	  	  if(getDrehrichtung() == 108){
@@ -495,6 +504,10 @@ void StartTask03(void const * argument)
 	  	 }
 
 
+	  }
+	  else{
+		  osDelay(5000);
+	  }
 
   }
   /* USER CODE END StartTask03 */

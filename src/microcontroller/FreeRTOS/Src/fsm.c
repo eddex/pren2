@@ -43,6 +43,7 @@ taskState_t wurfel_erkennen(void){
 	}*/
 
 	do{
+		osDelay(10);
 		storeDistanceValue = getDistanceValue();
 		storeTimeMeasurement = getTimeMeasurement();
 	}while((storeDistanceValue>60&&storeTimeMeasurement<1500) || (storeDistanceValue<5));
