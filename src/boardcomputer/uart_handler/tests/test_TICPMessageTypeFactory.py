@@ -1,3 +1,4 @@
+import sys
 from unittest import TestCase
 
 from uart_handler.ticp_common import TICPCommand, TICPMessageTypeFactory, TICPMessageType
@@ -18,7 +19,9 @@ class TestTICPMessageTypeFactory(TestCase):
         factory = TICPMessageTypeFactory()
         msg_target = TICPMessageType.RES_ALL_SENSOR_DATA_MSG
         cmd = TICPCommand.RES_ALL_SENSOR_DATA
-        msg_actual = factory.get_ticp_message_type_from_int(cmd.opcode)
+
+        msg_actual = factory.get_ticp_message_type_from_int(
+            int.from_bytes(cmd.opcode, byteorder=sys.byteorder, signed=False))
 
         self.assertEqual(msg_target, msg_actual)
 
@@ -42,7 +45,7 @@ class TestTICPMessageTypeFactory(TestCase):
         factory = TICPMessageTypeFactory()
         for command in TICPCommand:
             try:
-                opcode = command.opcode
+                opcode = int.from_bytes(command.opcode, byteorder=sys.byteorder, signed=False)
                 msg = factory.get_ticp_message_type_from_int(opcode)
                 if msg.command != command:
                     break

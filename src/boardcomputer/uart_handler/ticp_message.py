@@ -17,7 +17,7 @@ class TICPMessagePrototype(object):
             payload: Payload to be attached to the object. Payload size must match the expectet
                      size. Throws ValueError if size of payloads do not match
         """
-        self.message_type: TICPMessageType = message_type
+        self.message_type = message_type
         self.payload = payload
 
     @property
@@ -41,8 +41,8 @@ class TICPMessagePrototype(object):
     @payload.setter
     def payload(self, payload: bytes) -> None:
         """
-                Sets the payload of the TICP Message with the given bytes[] when the length corresponds
-                to the expected value for that message type.
+                Sets the payload of the TICPMessage with the given bytes[] when the length
+                corresponds to the expected value for that message type.
 
                 Throws an ValueError Exeption if the lengths don't correspond
 
@@ -57,6 +57,62 @@ class TICPMessagePrototype(object):
             raise ValueError("Passed payload size (" + str(len(payload)) +
                              ") does not match with expected size (" +
                              str(self.payload_size) + ")")
+
+
+class TICPMessageAllCommandData(TICPMessagePrototype):
+
+    def __init__(self, payload: bytes):
+
+        super(TICPMessageAllCommandData, self).__init__(TICPMessageType.RES_ALL_COMMAND_DATA_MSG,
+                                                        payload)
+
+    @classmethod
+    def from_values(cls, start_signal: bool, round_counter: int, stop_signal: bool):
+        payload = 0
+
+        if start_signal:
+            payload = payload | 0x80
+
+        if stop_signal:
+            payload = payload | 0x04
+        if round_counter > 15:
+            raise ValueError("Round Counter is bigger than 4 bit (15)")
+        else:
+            payload = payload | (round_counter << 3)
+            payload_bytes = payload.to_bytes(TICPMessageType.RES_ALL_COMMAND_DATA_MSG.payload_size,
+                                             byteorder=sys.byteorder,
+                                             signed=False)
+
+        return TICPMessageAllCommandData(payload_bytes)
+
+    @property
+    def start_signal(self) -> bool:
+
+        payload_int = int.from_bytes(self._payload, byteorder=sys.byteorder, signed=False)
+        if (payload_int & 0x80) == 0x80:
+            return True
+
+        else:
+            return False
+
+    @property
+    def stop_signal(self) -> bool:
+
+        payload_int = int.from_bytes(self._payload, byteorder=sys.byteorder, signed=False)
+        if (payload_int & 0x04) == 0x04:
+            return True
+
+        else:
+            return False
+
+    @property
+    def round_counter(self) -> int:
+
+        payload_int = int.from_bytes(self._payload, byteorder=sys.byteorder, signed=False)
+        return (payload_int & 0x78) >> 3
+
+
+
 
 
 class TICPMessageAllSensorData(TICPMessagePrototype):

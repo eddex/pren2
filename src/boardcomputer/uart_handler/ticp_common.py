@@ -1,6 +1,5 @@
+import sys
 from enum import Enum
-
-import numpy as np
 
 
 class TICPCommand(Enum):
@@ -24,40 +23,41 @@ class TICPCommand(Enum):
 
     """
     # Request Messages (REQ)
-    REQ_ALL_SENSOR_DATA = np.uint8(0x01)
-    REQ_TOF1_DATA = np.uint8(0x02)
-    REQ_TOF2_DATA = np.uint8(0x03)
-    REQ_ACCEL_DATA = np.uint8(0x04)
-    REQ_SPEED_DATA = np.uint8(0x05)
-    REQ_SERVO_DATA = np.uint8(0x06)
-    REQ_FSM_STATE = np.uint8(0x07)
+    REQ_ALL_SENSOR_DATA = bytes.fromhex("01")
+    REQ_TOF1_DATA = bytes.fromhex("02")
+    REQ_TOF2_DATA = bytes.fromhex("03")
+    REQ_ACCEL_DATA = bytes.fromhex("04")
+    REQ_SPEED_DATA = bytes.fromhex("05")
+    REQ_SERVO_DATA = bytes.fromhex("06")
+    REQ_FSM_STATE = bytes.fromhex("07")
 
     # Response Messages (RES)
-    RES_ALL_SENSOR_DATA = np.uint8(0x21)
-    RES_TOF1_SENSOR_DATA = np.uint8(0x22)
-    RES_TOF2_SENSOR_DATA = np.uint8(0x23)
-    RES_ACCEL_DATA = np.uint8(0x24)
-    RES_SPEED_DATA = np.uint8(0x25)
-    RES_SERVO_DATA = np.uint8(0x26)
-    RES_FSM_STATE = np.uint8(0x27)
+    RES_ALL_SENSOR_DATA = bytes.fromhex("21")
+    RES_TOF1_SENSOR_DATA = bytes.fromhex("22")
+    RES_TOF2_SENSOR_DATA = bytes.fromhex("23")
+    RES_ACCEL_DATA = bytes.fromhex("24")
+    RES_SPEED_DATA = bytes.fromhex("25")
+    RES_SERVO_DATA = bytes.fromhex("26")
+    RES_FSM_STATE = bytes.fromhex("27")
+    RES_ALL_COMMAND_DATA = bytes.fromhex("28")
 
     # Special Commands (SPC)
-    SPC_LOOPBACK = np.uint8(0x70)
-    SPC_LOOPBACK_RESPONSE = np.uint8(0x71)
-    SPC_ACKNOWLEDGE = np.uint8(0x79)
-    SPC_START_OF_FRAME = np.uint8(0x7A)
-    SPC_ESCAPE = np.uint8(0x7D)
-    SPC_END_OF_FRAME = np.uint8(0x7E)
+    SPC_LOOPBACK = bytes.fromhex("70")
+    SPC_LOOPBACK_RESPONSE = bytes.fromhex("71")
+    SPC_ACKNOWLEDGE = bytes.fromhex("79")
+    SPC_START_OF_FRAME = bytes.fromhex("7A")
+    SPC_ESCAPE = bytes.fromhex("7D")
+    SPC_END_OF_FRAME = bytes.fromhex("7E")
 
     # Synchronization
-    SYN_MC = np.uint8(0x00)
-    SYN_BC = np.uint8(0x7F)
+    SYN_MC = bytes.fromhex("00")
+    SYN_BC = bytes.fromhex("7F")
 
-    def __init__(self, opcode: np.uint8):
-        self._opcode: np.uint8 = opcode
+    def __init__(self, opcode: bytes):
+        self._opcode = opcode
 
     @property
-    def opcode(self) -> np.uint8:
+    def opcode(self) -> bytes:
         """ Returns a 8bit unsigned number containing the Opcoode of the Command
 
         Returns:
@@ -100,6 +100,7 @@ class TICPMessageType(Enum):
     RES_SPEED_DATA_MSG = (TICPCommand.RES_SPEED_DATA, 2)
     RES_SERVO_DATA_MSG = (TICPCommand.RES_SERVO_DATA, 1)
     RES_FSM_STATE_MSG = (TICPCommand.RES_FSM_STATE, 1)
+    RES_ALL_COMMAND_DATA_MSG = (TICPCommand.RES_ALL_COMMAND_DATA, 1)
 
     # Special Commands SPC
     SPC_LOOPBACK_MSG = (TICPCommand.SPC_LOOPBACK, 1)
@@ -114,8 +115,8 @@ class TICPMessageType(Enum):
     SYN_BC_MSG = (TICPCommand.SYN_BC, 0)
 
     def __init__(self, command: TICPCommand, payload_size: int):
-        self._command: TICPCommand = command
-        self._payload_size: int = payload_size
+        self._command = command
+        self._payload_size = payload_size
 
     @property
     def command(self) -> TICPCommand:
@@ -168,7 +169,7 @@ class TICPMessageTypeFactory:
         """
         return self.__command_to_msg_type_dict[command]
 
-    def get_ticp_message_type_from_int(self, opcode: np.uint8) -> TICPMessageType:
+    def get_ticp_message_type_from_int(self, opcode: int) -> TICPMessageType:
         """ Factory methode for creating an TICPMessageType from a 'uint8' opcode
 
         Args:
@@ -178,5 +179,11 @@ class TICPMessageTypeFactory:
             The return value in form of an TICPMessageType Enum
 
         """
+        opcode_bytes = opcode.to_bytes(1, byteorder=sys.byteorder, signed=False)
+        cmd = TICPCommand(opcode_bytes)
+        return self.__command_to_msg_type_dict[cmd]
+
+    def get_ticp_message_type_from_byte(self, opcode: bytes) -> TICPMessageType:
+
         cmd = TICPCommand(opcode)
         return self.__command_to_msg_type_dict[cmd]
