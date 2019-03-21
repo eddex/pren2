@@ -26,7 +26,7 @@ enum fsm{
 };
 
 typedef enum {
-	TASK_OK, TASK_ERROR, TASK_TIME_OVERFLOW
+	TASK_OK, TASK_ERROR, TASK_TIME_OVERFLOW, TASK_RUNNING
 }taskState_t;
 
 

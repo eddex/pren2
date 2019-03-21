@@ -69,7 +69,7 @@
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-#define FunkFernsteuer_BoardcomputerBetrieb 1			//0 --> Boardcomputer / 1 --> Funkfernsteuerung
+#define FunkFernsteuer_BoardcomputerBetrieb 0			//0 --> Boardcomputer / 1 --> Funkfernsteuerung
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
