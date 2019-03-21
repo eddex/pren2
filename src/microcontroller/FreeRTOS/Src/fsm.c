@@ -21,6 +21,7 @@
 #include "motor.h"
 #include "pid.h"
 #include "fsm.h"
+#include "DataTransfer.h"
 
 
 //enum stateOfTask taskState;

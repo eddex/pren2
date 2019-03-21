@@ -67,6 +67,7 @@
 #include "quad.h"
 #include "servo.h"
 #include "fsm.h"
+#include "DataTransfer.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -85,7 +86,7 @@
 #define MaxTrackLength 15000 // maximale Streckenlänge [mm]
 
 
-#define WuerfelerkenneUndLaden_TEST 1
+#define WuerfelerkenneUndLaden_TEST 0
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -250,6 +251,8 @@ void StartDefaultTask(void const * argument)
   /* Infinite loop */
   for(;;)
   {
+
+
 	//Statemachine acc. to PREN1 Documentation p.24
 	switch(fsm_state){
 	// Warten auf Startbefehl von Raspi

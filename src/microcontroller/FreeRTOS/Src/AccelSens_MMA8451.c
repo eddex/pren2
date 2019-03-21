@@ -13,6 +13,7 @@
 #include "gpio.h"
 
 #include "AccelSens_MMA8451.h"
+#include "DataTransfer.h"
 
 taskState_t accelTaskState;
 
@@ -22,26 +23,11 @@ uint16_t MMA8451_DevAddress = finalDevAddress_MMA8451<<1;			//MMA8451 Address sh
 uint8_t dataBuffer[2];												//Databuffer for Init of Device (I2C)
 uint8_t axisXYZ_dataBuffer[] = {0,0,0,0,0,0};					    //Databuffer for Accel Values of Devide (I2C)
 
-uint8_t enableSensorTask = 0;
-
 //Values of the X_Y_Z_Register of the accel Sensor in 2er Complement
-volatile int16_t Xout_14_bit = 0;
-volatile int16_t Yout_14_bit = 0;
-volatile int16_t Zout_14_bit = 0;
+int16_t Xout_14_bit = 0;
+int16_t Yout_14_bit = 0;
+int16_t Zout_14_bit = 0;
 
-//Values with the corresponding value in mg
-volatile int16_t Xout_g = 0;
-volatile int16_t Yout_g = 0;
-volatile int16_t Zout_g = 0;
-
-
-void setEnableSensorTask(uint8_t enable){
-	enableSensorTask = enable;
-}
-
-uint8_t getEnableSensorTask(void){
-	return enableSensorTask;
-}
 
 taskState_t MMA8451_Init(void){
 
@@ -132,22 +118,11 @@ taskState_t measureAccel3AxisValues(void){
 	}
 
 	//Calculate the final Value in [mg] in depending on the sensitivity
-	Xout_g = (1000*Xout_14_bit) / SENSITIVITY_2G;              // Compute X-axis output value in mg's
-	Yout_g = (1000*Yout_14_bit) / SENSITIVITY_2G;              // Compute Y-axis output value in mg's
-	Zout_g = (1000*Zout_14_bit) / SENSITIVITY_2G;              // Compute Z-axis output value in mg's
+	setXValue(((1000*Xout_14_bit) / SENSITIVITY_2G));              // Compute X-axis output value in mg's
+	setYValue(((1000*Yout_14_bit) / SENSITIVITY_2G));              // Compute Y-axis output value in mg's
+	setZValue(((1000*Zout_14_bit) / SENSITIVITY_2G));              // Compute Z-axis output value in mg's
 
 
 	return accelTaskState;
 }
 
-int16_t getXValue(void){
-	return Xout_g;
-}
-
-int16_t getYValue(void){
-	return Yout_g;
-}
-
-int16_t getZValue(void){
-	return Zout_g;
-}

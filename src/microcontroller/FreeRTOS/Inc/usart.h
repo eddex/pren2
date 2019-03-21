@@ -65,16 +65,6 @@ extern UART_HandleTypeDef huart1;
 extern UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN Private defines */
-
-typedef struct{
-unsigned int startSignal 	: 1;
-unsigned int RundenCounter 	: 4;
-unsigned int FinalHSerkannt : 1;
-unsigned int singalCounter	: 1;
-unsigned int spareFlag		: 1;
-} flags_UartData_t;
-
-
 /* USER CODE END Private defines */
 
 extern void _Error_Handler(char *, int);
@@ -83,9 +73,6 @@ void MX_USART1_UART_Init(void);
 void MX_USART2_UART_Init(void);
 
 /* USER CODE BEGIN Prototypes */
-
-void setFlagStructure(uint8_t value);
-flags_UartData_t getFlagStructure(void);
 
 /* USER CODE END Prototypes */
 
