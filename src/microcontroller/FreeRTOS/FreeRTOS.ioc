@@ -1,9 +1,13 @@
 #MicroXplorer Configuration settings - do not modify
 FREERTOS.BinarySemaphores01=myBinarySem01,Dynamic,NULL
 FREERTOS.FootprintOK=true
-FREERTOS.IPParameters=Tasks01,FootprintOK,configTOTAL_HEAP_SIZE,BinarySemaphores01
+FREERTOS.IPParameters=Tasks01,FootprintOK,configTOTAL_HEAP_SIZE,BinarySemaphores01,configUSE_IDLE_HOOK,configUSE_MALLOC_FAILED_HOOK,configGENERATE_RUN_TIME_STATS,configUSE_TRACE_FACILITY
 FREERTOS.Tasks01=defaultTask,0,128,StartDefaultTask,Default,NULL,Dynamic,NULL,NULL;SensorTask,0,128,StartTask02,Default,NULL,Dynamic,NULL,NULL;UartRadioTask,0,128,StartTask03,Default,NULL,Dynamic,NULL,NULL;ServoTask,0,128,StartTask04,Default,NULL,Dynamic,NULL,NULL
+FREERTOS.configGENERATE_RUN_TIME_STATS=1
 FREERTOS.configTOTAL_HEAP_SIZE=6144
+FREERTOS.configUSE_IDLE_HOOK=1
+FREERTOS.configUSE_MALLOC_FAILED_HOOK=1
+FREERTOS.configUSE_TRACE_FACILITY=1
 File.Version=6
 KeepUserPlacement=true
 Mcu.Family=STM32F3
@@ -144,7 +148,7 @@ PF1\ /\ OSC_OUT.GPIO_PuPd=GPIO_PULLDOWN
 PF1\ /\ OSC_OUT.Locked=true
 PF1\ /\ OSC_OUT.Signal=GPIO_Output
 PinOutPanel.RotationAngle=0
-ProjectManager.AskForMigrate=true
+ProjectManager.AskForMigrate=false
 ProjectManager.BackupPrevious=false
 ProjectManager.CompilerOptimize=6
 ProjectManager.ComputerToolchain=false
