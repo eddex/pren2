@@ -63,6 +63,7 @@
 #include "quad.h"
 #include "motor.h"
 #include "pid.h"
+#include "SEGGER/SEGGER_SYSVIEW.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -258,7 +259,7 @@ int main(void)
 
   //Enable H-Bridge Module of Motor1 and Motor2
   HAL_GPIO_WritePin(HB_Sleep_GPIO_Port, HB_Sleep_Pin, GPIO_PIN_SET);
-
+  SEGGER_SYSVIEW_Conf(); // Start SystemViewer
 
   /* USER CODE END 2 */
 
