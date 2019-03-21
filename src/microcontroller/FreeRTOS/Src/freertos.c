@@ -114,6 +114,57 @@ void StartTask04(void const * argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
+/* Hook prototypes */
+void configureTimerForRunTimeStats(void);
+unsigned long getRunTimeCounterValue(void);
+void vApplicationIdleHook(void);
+void vApplicationMallocFailedHook(void);
+
+/* USER CODE BEGIN 1 */
+uint32_t TickCounter = 0;
+/* Functions needed when configGENERATE_RUN_TIME_STATS is on */
+__weak void configureTimerForRunTimeStats(void)
+{
+	TickCounter = 0;
+}
+
+__weak unsigned long getRunTimeCounterValue(void)
+{
+	return TickCounter++;
+}
+/* USER CODE END 1 */
+
+/* USER CODE BEGIN 2 */
+__weak void vApplicationIdleHook( void )
+{
+   /* vApplicationIdleHook() will only be called if configUSE_IDLE_HOOK is set
+   to 1 in FreeRTOSConfig.h. It will be called on each iteration of the idle
+   task. It is essential that code added to this hook function never attempts
+   to block in any way (for example, call xQueueReceive() with a block time
+   specified, or call vTaskDelay()). If the application makes use of the
+   vTaskDelete() API function (as this demo application does) then it is also
+   important that vApplicationIdleHook() is permitted to return to its calling
+   function, because it is the responsibility of the idle task to clean up
+   memory allocated by the kernel to any task that has since been deleted. */
+}
+/* USER CODE END 2 */
+
+/* USER CODE BEGIN 5 */
+__weak void vApplicationMallocFailedHook(void)
+{
+   /* vApplicationMallocFailedHook() will only be called if
+   configUSE_MALLOC_FAILED_HOOK is set to 1 in FreeRTOSConfig.h. It is a hook
+   function that will get called if a call to pvPortMalloc() fails.
+   pvPortMalloc() is called internally by the kernel whenever a task, queue,
+   timer or semaphore is created. It is also called by various parts of the
+   demo application. If heap_1.c or heap_2.c are used, then the size of the
+   heap available to pvPortMalloc() is defined by configTOTAL_HEAP_SIZE in
+   FreeRTOSConfig.h, and the xPortGetFreeHeapSize() API function can be used
+   to query the size of free heap space that remains (although it does not
+   provide information on how the remaining heap might be fragmented). */
+}
+/* USER CODE END 5 */
+
 /**
   * @brief  FreeRTOS initialization
   * @param  None
@@ -180,6 +231,9 @@ void StartDefaultTask(void const * argument)
   enum fsm fsm_state; // create enum for statemachine task
   fsm_state = STARTUP; // Default State -> Startup
 
+  taskState_t taskState;
+  taskState = TASK_RUNNING;
+
   uint8_t wurfelCtr = 0; // Zähler Anzahl Ladeversuche
 
   int32_t posStart = 0;	// Positionsmerker bei Startsignal
@@ -205,10 +259,14 @@ void StartDefaultTask(void const * argument)
 		if (0) /*getStartSignal()*/{
 			posStart=Quad_GetPos();
 			fsm_state = WURFEL_ERKENNEN;
+			startTimeMeasurment();											//Zeitmessung beginnen für Abbruchkriterium des Tasks
+			PID_Velo(100);													//Motoren starten auf tiefster Geschwindigkeitsstufe
 		}
 
 		#if WuerfelerkenneUndLaden_TEST
 			fsm_state = WURFEL_ERKENNEN;
+			startTimeMeasurment();											//Zeitmessung beginnen für Abbruchkriterium des Tasks
+			PID_Velo(100);													//Motoren starten auf tiefster Geschwindigkeitsstufe
 		#endif
 
 
@@ -219,20 +277,27 @@ void StartDefaultTask(void const * argument)
 		//Nicht notwendig, da in Funktion wurfel_erkennen() bereits gemacht wird.
 		//PID_Velo(SlowVelo); // mit langsamer Geschwindigkeit fahren
 
-		if(wurfel_erkennen()==TASK_OK){
+		taskState = wurfel_erkennen();
+
+		if(taskState == TASK_OK){
 			posWurfel = Quad_GetPos();
 			fsm_state = WURFEL_VORFAHREN;
 			HAL_GPIO_WritePin(LED_Heartbeat_GPIO_Port, LED_Heartbeat_Pin, GPIO_PIN_SET);
 		}
-		else{ // Würfel nicht erkannt
+		else if(taskState == TASK_TIME_OVERFLOW){ // Würfel nicht erkannt
 			fsm_state = STARTPOSITION;
 			HAL_GPIO_WritePin(LED_Heartbeat_GPIO_Port, LED_Heartbeat_Pin, GPIO_PIN_SET);
 		}
+		else{}
+
 		break;
 
 	// Vorfahren mit Lademechanismus zum Würfel
 	case WURFEL_VORFAHREN:
-		PID_Pos(posWurfel+DistTofToWurfel); // An Würfelposition fahren
+		if(0){
+			PID_Pos(posWurfel+DistTofToWurfel); // An Würfelposition fahren
+		}
+
 
 		// TODO implement method PID_InPos in pid.c
 		if (0) /*PID_InPos()*/{
@@ -380,7 +445,7 @@ void StartDefaultTask(void const * argument)
 		}
 		break;
 	}
-    osDelay(1);
+    osDelay(50);
   }
   /* USER CODE END StartDefaultTask */
 }
@@ -420,7 +485,7 @@ void StartTask02(void const * argument)
 
 		  //txData[0] = getDistanceValue();
 		  //HAL_UART_Transmit(&huart2, txData, 3, 100);
-		  osDelay(10);
+		  osDelay(50);
 	  }
 
 	  else{
@@ -492,6 +557,7 @@ void StartTask03(void const * argument)
 	  				  PID_SetEnable(0);
 	  			  }
 	  		  }
+
 	  		}
 
 
@@ -502,6 +568,8 @@ void StartTask03(void const * argument)
 	  		 __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, 0);
 
 	  	 }
+
+	  	  osDelay(10);
 
 
 	  }
@@ -539,7 +607,7 @@ void StartTask04(void const * argument)
 	  if(enableTask ==1){
 		  servoPWM = 26400 + getSpeedGroupValue()*2740;
 		  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, servoPWM);
-		  osDelay(10);
+		  osDelay(50);
 	  }
 
 	  else{

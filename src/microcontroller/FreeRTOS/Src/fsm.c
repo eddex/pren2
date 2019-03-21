@@ -25,42 +25,42 @@
 
 //enum stateOfTask taskState;
 uint16_t storeTimeValue= 0;
-volatile uint8_t debugDistanceValue = 0;
 uint8_t storeDistanceValue = 0;
 uint8_t storeTimeMeasurement = 0;
 
 taskState_t wurfel_erkennen(void){
 
-	startTimeMeasurment();											//Zeitmessung beginnen für Abbruchkriterium des Tasks
-
-	PID_Velo(100);													//Motoren starten auf tiefster Geschwindigkeitsstufe
-
-
 	//Vorwärts fahren und auf Würfelekrennung warten, Abbruch nach 15s nichts erkennen
-	/*while((getDistanceValue() > 60 && getTimeMeasurement()<1500) || (getDistanceValue()<5)){		//OR Abfrage, da Sensor zu beginn manchmal 0 zurückliefert
-		storeTimeValue=getTimeMeasurement();
-		debugDistanceValue = getDistanceValue();
-	}*/
 
-	do{
-		osDelay(10);
+	if((storeDistanceValue>60&&storeTimeMeasurement<1500) || (storeDistanceValue<5)){
 		storeDistanceValue = getDistanceValue();
 		storeTimeMeasurement = getTimeMeasurement();
-	}while((storeDistanceValue>60&&storeTimeMeasurement<1500) || (storeDistanceValue<5));
+	}
+	else{
+		Motor_Break();//Motoren stoppen wenn Distanz zum Würfel im Bereich von x (mm) - y (mm) ist ODER Time overflow
+	}
 
-	Motor_Break();													//Motoren stoppen wenn Distanz zum Würfel im Bereich von x (mm) - y (mm) ist ODER Time overflow
-
-	if(storeTimeValue>=1499){return TASK_TIME_OVERFLOW;}
-	else{return TASK_OK;}
+	if(storeTimeValue>=1499){
+		return TASK_TIME_OVERFLOW;
+	}
+	else if(storeDistanceValue<60){
+		return TASK_OK;
+	}
+	else{
+		return TASK_RUNNING;
+	}
 }
 
 taskState_t haltesignal_erkennen(void){
+	//Achtung dieser Task ist noch nicht durchdacht --> Keine while!!
+
 	startTimeMeasurment();											//Zeitmessung beginnen für Abbruchkriterium des Tasks
 
 	PID_Velo(12);													//Motoren starten auf tiefster Geschwindigkeitsstufe
 
 	//Vorwärts fahren und auf Würfelekrennung warten, Abbruch nach 15s nichts erkennen
 	while(getDistanceValue() > 60 || getTimeMeasurement()<1500){
+		osDelay(10);
 		storeTimeValue=getTimeMeasurement();
 	}
 	Motor_Break();													//Motoren stoppen wenn Distanz zum Würfel im Bereich von x (mm) - y (mm) ist ODER Time overflow
