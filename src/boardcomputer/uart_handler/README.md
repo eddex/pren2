@@ -58,3 +58,6 @@ Comment out the line:
  - Install minicom `sudp apt-get install minicom`
  - Launche Minicom
  ``minicom -b 115200 -o -D /dev/ttyAMA0``
+
+#### Install the pySerial package 
+``sudo apt-get install python-serial``
