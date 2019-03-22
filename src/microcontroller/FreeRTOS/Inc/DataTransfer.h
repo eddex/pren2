@@ -59,4 +59,10 @@ void setSpeedGroupValue(uint8_t);
 //************************************************************
 
 
+//****************Timer extension**************************************
+void incrementTimeMeasurmentValue(void);
+void startTimeMeasurment(void);
+uint16_t getTimeMeasurement(void);
+//************************************************************
+
 #endif /* DATATRANSFER_H_ */

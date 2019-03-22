@@ -126,3 +126,25 @@ void setSpeedGroupValue(uint8_t groupValue){
 	speedGroupValue = groupValue;
 }
 //************************************************************
+
+
+
+//****************Timer extension**************************************
+uint16_t timeMeasurementValue = 0;
+
+void incrementTimeMeasurmentValue(){
+	timeMeasurementValue++;
+}
+
+void startTimeMeasurment(){
+	timeMeasurementValue = 0;
+}
+
+uint16_t getTimeMeasurement(){
+	uint16_t copytimeMeasurementValue;
+	taskENTER_CRITICAL();
+	copytimeMeasurementValue = timeMeasurementValue;
+	taskEXIT_CRITICAL();
+	return copytimeMeasurementValue;
+}
+//************************************************************

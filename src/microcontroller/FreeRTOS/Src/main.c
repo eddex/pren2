@@ -72,7 +72,7 @@
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-#define FunkFernsteuer_BoardcomputerBetrieb 0			//0 --> Boardcomputer / 1 --> Funkfernsteuerung
+#define FunkFernsteuer_BoardcomputerBetrieb 1			//0 --> Boardcomputer / 1 --> Funkfernsteuerung
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -157,7 +157,7 @@ int main(void)
   Motor_Init();
 
   //Configuration of TaskEnable
-  setEnableSensorTask(1);										//Enable = 1 / Disable= 0 -> SensorTask
+  setEnableSensorTask(0);										//Enable = 1 / Disable= 0 -> SensorTask
 
   //If Sensortask enabled
   if(getEnableSensorTask() == 1){

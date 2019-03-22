@@ -25,15 +25,14 @@
 
 
 //enum stateOfTask taskState;
-uint16_t storeTimeValue= 0;
 uint8_t storeDistanceValue = 0;
-uint8_t storeTimeMeasurement = 0;
+uint16_t storeTimeMeasurement = 0;
 
 taskState_t wurfel_erkennen(void){
 
 	//Vorwärts fahren und auf Würfelekrennung warten, Abbruch nach 15s nichts erkennen
 
-	if((storeDistanceValue>60&&storeTimeMeasurement<1500) || (storeDistanceValue<5)){
+	if(((storeDistanceValue>60)&&(storeTimeMeasurement<1500)) || (storeDistanceValue<5)){
 		storeDistanceValue = getDistanceValue();
 		storeTimeMeasurement = getTimeMeasurement();
 	}
@@ -41,10 +40,10 @@ taskState_t wurfel_erkennen(void){
 		Motor_Break();//Motoren stoppen wenn Distanz zum Würfel im Bereich von x (mm) - y (mm) ist ODER Time overflow
 	}
 
-	if(storeTimeValue>=1499){
+	if(storeTimeMeasurement>=1499){
 		return TASK_TIME_OVERFLOW;
 	}
-	else if(storeDistanceValue<60){
+	else if(storeDistanceValue<=60){
 		return TASK_OK;
 	}
 	else{
@@ -62,10 +61,10 @@ taskState_t haltesignal_erkennen(void){
 	//Vorwärts fahren und auf Würfelekrennung warten, Abbruch nach 15s nichts erkennen
 	while(getDistanceValue() > 60 || getTimeMeasurement()<1500){
 		osDelay(10);
-		storeTimeValue=getTimeMeasurement();
+		storeTimeMeasurement=getTimeMeasurement();
 	}
 	Motor_Break();													//Motoren stoppen wenn Distanz zum Würfel im Bereich von x (mm) - y (mm) ist ODER Time overflow
 
-	if(storeTimeValue>1500){return TASK_TIME_OVERFLOW;}
+	if(storeTimeMeasurement>1500){return TASK_TIME_OVERFLOW;}
 	else{return TASK_OK;}
 }

@@ -51,8 +51,6 @@
 #include "tim.h"
 
 /* USER CODE BEGIN 0 */
-uint16_t timeMeasurementValue = 0;
-
 /* USER CODE END 0 */
 
 TIM_HandleTypeDef htim2;
@@ -328,18 +326,6 @@ void HAL_TIM_Base_MspDeInit(TIM_HandleTypeDef* tim_baseHandle)
 } 
 
 /* USER CODE BEGIN 1 */
-
-void incrementTimeMeasurmentValue(){
-	timeMeasurementValue++;
-}
-
-void startTimeMeasurment(){
-	timeMeasurementValue = 0;
-}
-
-uint16_t getTimeMeasurement(){
-	return timeMeasurementValue;
-}
 
 /* USER CODE END 1 */
 
