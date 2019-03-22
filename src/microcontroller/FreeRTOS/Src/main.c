@@ -63,11 +63,9 @@
 #include "quad.h"
 #include "motor.h"
 #include "pid.h"
-<<<<<<< HEAD
 #include "DataTransfer.h"
-=======
-//#include "SEGGER/SEGGER_SYSVIEW.h"
->>>>>>> 5dcb0396ad6eae988a69354480dad2f285182bb8
+#include "SEGGER/SEGGER_SYSVIEW.h"
+
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
