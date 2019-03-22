@@ -86,7 +86,7 @@
 #define MaxTrackLength 15000 // maximale Streckenlänge [mm]
 
 
-#define WuerfelerkenneUndLaden_TEST 0
+#define WuerfelerkenneUndLaden_TEST 1
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/

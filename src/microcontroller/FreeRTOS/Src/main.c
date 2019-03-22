@@ -63,7 +63,11 @@
 #include "quad.h"
 #include "motor.h"
 #include "pid.h"
+<<<<<<< HEAD
 #include "DataTransfer.h"
+=======
+//#include "SEGGER/SEGGER_SYSVIEW.h"
+>>>>>>> 5dcb0396ad6eae988a69354480dad2f285182bb8
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -155,7 +159,7 @@ int main(void)
   Motor_Init();
 
   //Configuration of TaskEnable
-  setEnableSensorTask(0);										//Enable = 1 / Disable= 0 -> SensorTask
+  setEnableSensorTask(1);										//Enable = 1 / Disable= 0 -> SensorTask
 
   //If Sensortask enabled
   if(getEnableSensorTask() == 1){
@@ -259,7 +263,7 @@ int main(void)
 
   //Enable H-Bridge Module of Motor1 and Motor2
   HAL_GPIO_WritePin(HB_Sleep_GPIO_Port, HB_Sleep_Pin, GPIO_PIN_SET);
-
+  SEGGER_SYSVIEW_Conf(); // Start SystemViewer
 
   /* USER CODE END 2 */
 
