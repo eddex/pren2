@@ -72,7 +72,7 @@
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-#define FunkFernsteuer_BoardcomputerBetrieb 1			//0 --> Boardcomputer / 1 --> Funkfernsteuerung
+#define FunkFernsteuer_BoardcomputerBetrieb 0			//0 --> Boardcomputer / 1 --> Funkfernsteuerung
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -104,6 +104,11 @@ uint8_t storeFlagValue = 0;
 
 //debugVariable
 uint8_t tx_dataUART2[] = {0};		//Transmit Data Buffer for UART2 Debugging
+
+uint8_t raspyUARTDebug[20];
+uint8_t raspyDataCounter = 0;
+
+uint8_t sendToRaspy[11];
 //******************************************************************************************
 /* USER CODE END 0 */
 
@@ -405,10 +410,33 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 	//HAL_UART_Transmit(&huart2, tx_data, 1, 1000);
 
 #else
-	HAL_UART_Receive_IT(&huart1, rx_dataUART1_Boardcomputer, 2);		//Restart Interrupt reception mode
-	if(rx_dataUART1_Boardcomputer[0] == 0x7F){							//SYNC-Zeichen -->0111'1111
+	HAL_UART_Receive_IT(&huart1, rx_dataUART1_Boardcomputer, 1);		//Restart Interrupt reception mode
+	/*if(rx_dataUART1_Boardcomputer[0] == 0x7F){							//SYNC-Zeichen -->0111'1111
 		setFlagStructure(rx_dataUART1_Boardcomputer[1]);				//Save Received UART Data in Structure
+	}*/
+	raspyUARTDebug[raspyDataCounter] = rx_dataUART1_Boardcomputer[0];
+	raspyDataCounter++;
+
+	if(raspyDataCounter == 3){
+		raspyDataCounter =0;
+		setFlagStructure(raspyUARTDebug[2]);
+
+		/*sendToRaspy[0] = 0x21;
+		for(int i = 1; i<=10;i++){
+			sendToRaspy[i]=i;
+		}
+		HAL_UART_Transmit(&huart1, sendToRaspy, 11, 1000);
+		 */
 	}
+
+	if(getFlagStructure().startSignal == 1){
+		PID_Velo(200);
+	}
+	else{
+		PID_Velo(0);
+	}
+
+
 
 
 #endif

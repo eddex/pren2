@@ -263,6 +263,7 @@ void StartDefaultTask(void const * argument)
 			posStart=Quad_GetPos();
 			fsm_state = WURFEL_ERKENNEN;
 			startTimeMeasurment();											//Zeitmessung beginnen für Abbruchkriterium des Tasks
+			//Achtung PID_Velo immer ausführen!!!!!!!!!
 			PID_Velo(100);													//Motoren starten auf tiefster Geschwindigkeitsstufe
 		}
 
@@ -512,7 +513,7 @@ void StartTask03(void const * argument)
 	uint8_t firstForwardCount =0;		//Bremst motor vor Seitenwechsel
 	uint8_t firstReverseCount = 0;		//dito
 
-	uint8_t enableTask = 0;
+	uint8_t enableTask = 1;
   /* Infinite loop */
   for(;;)
   {
