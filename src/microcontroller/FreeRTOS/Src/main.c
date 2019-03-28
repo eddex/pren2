@@ -72,7 +72,7 @@
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-#define FunkFernsteuer_BoardcomputerBetrieb 0			//0 --> Boardcomputer / 1 --> Funkfernsteuerung
+#define FunkFernsteuer_BoardcomputerBetrieb 1			//0 --> Boardcomputer / 1 --> Funkfernsteuerung
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -243,14 +243,14 @@ int main(void)
   HAL_TIM_Base_Start_IT(&htim3);
 
   //CHannel Enable
-  //HAL_TIM_PWM_Start_IT(&htim3, TIM_CHANNEL_1);
-  //HAL_TIM_PWM_Start_IT(&htim3, TIM_CHANNEL_2);
+  HAL_TIM_PWM_Start_IT(&htim3, TIM_CHANNEL_1);
+  HAL_TIM_PWM_Start_IT(&htim3, TIM_CHANNEL_2);
   HAL_TIM_PWM_Start_IT(&htim3, TIM_CHANNEL_3);
   HAL_TIM_PWM_Start_IT(&htim3, TIM_CHANNEL_4);
 
   //Channel Compare Value --> PWM Dutycycle
-  //__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
-  //__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, 0);
+  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
+  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, 0);
   __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_3, 0);
   __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, 0);
   //****************************************************************
@@ -435,6 +435,8 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 	else{
 		PID_Velo(0);
 	}
+
+
 
 
 
