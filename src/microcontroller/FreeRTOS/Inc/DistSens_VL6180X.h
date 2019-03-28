@@ -7,8 +7,5 @@
 
 taskState_t VL6180X_Init(void);
 taskState_t measureDistanceValue(void);
-int8_t getDistanceValue(void);
-
-
 
 #endif

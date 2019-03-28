@@ -32,8 +32,6 @@ class AnalysisOutcome:
     """
     Contains the information found in an image.
     """
-    signal_type: SignalType
-    signal_number: SignalNumber
 
     def __init__(self, signal_type: SignalType, signal_number: SignalNumber):
         """

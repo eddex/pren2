@@ -63,13 +63,16 @@
 #include "quad.h"
 #include "motor.h"
 #include "pid.h"
+#include "DataTransfer.h"
+#include "SEGGER/SEGGER_SYSVIEW.h"
+
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-#define FunkFernsteuer_BoardcomputerBetrieb 0			//0 --> Boardcomputer / 1 --> Funkfernsteuerung
+#define FunkFernsteuer_BoardcomputerBetrieb 1			//0 --> Boardcomputer / 1 --> Funkfernsteuerung
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -258,7 +261,7 @@ int main(void)
 
   //Enable H-Bridge Module of Motor1 and Motor2
   HAL_GPIO_WritePin(HB_Sleep_GPIO_Port, HB_Sleep_Pin, GPIO_PIN_SET);
-
+  SEGGER_SYSVIEW_Conf(); // Start SystemViewer
 
   /* USER CODE END 2 */
 

@@ -76,3 +76,8 @@ __pycache__
 
 # jupyter notebook
 .ipynb_checkpoints
+
+# test images
+*.jpg
+*.png
+*.tiff

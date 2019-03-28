@@ -11,43 +11,12 @@
 #include "usart.h"
 #include "AccelSens_MMA8451.h"
 #include "RadioModule.h"
+#include "DataTransfer.h"
 
 uint8_t sendFlag = 0;				//Sendflag decide which AccelSens Axis value will be sent (Range from 1-5)
-uint8_t speedGroupValue = 0;
-
-//Send Data via Radio Module to PIC18
 char c;								//Wird für UART Funkprotokoll verwendet. Kann Char "x", "y" oder "z" sein
 uint8_t tx_dataUART1[] = {0,0};		//Send Data Buffer for Data Transfer to PIC
 
-
-uint16_t finalVelocity = 0;
-uint8_t drehrichtung = 0;			//Value is sent by radioControl Modul --> Reverse / Forward
-
-
-
-uint8_t getDrehrichtung(void){
-	return drehrichtung;
-}
-
-void setDrehrichtung(uint8_t uart_drehrichtung){
-	drehrichtung = uart_drehrichtung;
-}
-
-uint16_t getfinalVelocity(void){
-	return finalVelocity;
-}
-
-void setfinalVelocity(uint16_t velocity){
-	finalVelocity = velocity;
-}
-
-uint8_t getSpeedGroupValue(void){
-	return speedGroupValue;
-}
-
-void setSpeedGroupValue(uint8_t groupValue){
-	speedGroupValue = groupValue;
-}
 
 void sendSensorDatatoRadioModule(void){
 
@@ -166,6 +135,4 @@ void sendSensorDatatoRadioModule(void){
 		  HAL_UART_Transmit(&huart2,(uint8_t*)&c, 1,1000);
 		  HAL_UART_Transmit(&huart2, tx_dataUART1, 1, 1000);
 	  }*/
-
-
 }

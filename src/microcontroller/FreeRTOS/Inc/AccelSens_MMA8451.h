@@ -66,13 +66,5 @@ typedef enum
 
 taskState_t MMA8451_Init(void);
 taskState_t measureAccel3AxisValues(void);
-int16_t getXValue(void);
-int16_t getYValue(void);
-int16_t getZValue(void);
-
-
-void setEnableSensorTask(uint8_t);
-
-uint8_t getEnableSensorTask(void);
 
 #endif

@@ -67,6 +67,7 @@
 #include "quad.h"
 #include "servo.h"
 #include "fsm.h"
+#include "DataTransfer.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -85,7 +86,7 @@
 #define MaxTrackLength 15000 // maximale Streckenlänge [mm]
 
 
-#define WuerfelerkenneUndLaden_TEST 1
+#define WuerfelerkenneUndLaden_TEST 0
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -250,6 +251,8 @@ void StartDefaultTask(void const * argument)
   /* Infinite loop */
   for(;;)
   {
+
+
 	//Statemachine acc. to PREN1 Documentation p.24
 	switch(fsm_state){
 	// Warten auf Startbefehl von Raspi
@@ -294,7 +297,7 @@ void StartDefaultTask(void const * argument)
 
 	// Vorfahren mit Lademechanismus zum Würfel
 	case WURFEL_VORFAHREN:
-		if(0){
+		if(1){
 			PID_Pos(posWurfel+DistTofToWurfel); // An Würfelposition fahren
 		}
 
@@ -474,10 +477,10 @@ void StartTask02(void const * argument)
 			  testInt = getZValue();
 		  }*/
 		  if(measureDistanceValue()==TASK_OK){
-				testInt = getDistanceValue();
-				if(testInt <60){
-					__NOP();
-				}
+				//testInt = getDistanceValue();
+				//if(testInt <60){
+				//	__NOP();
+				//}
 		  }
 		  //txData[0] = (uint8_t) z;
 		  //txData[1] = (uint8_t) (getZValue() >> 8);
@@ -485,7 +488,7 @@ void StartTask02(void const * argument)
 
 		  //txData[0] = getDistanceValue();
 		  //HAL_UART_Transmit(&huart2, txData, 3, 100);
-		  osDelay(50);
+		  osDelay(100);
 	  }
 
 	  else{
@@ -600,7 +603,7 @@ void StartTask04(void const * argument)
 	 */
 
 	uint8_t enableTask = 0;
-  uint16_t servoPWM = 0;
+	uint16_t servoPWM = 0;
 
   for(;;)
   {

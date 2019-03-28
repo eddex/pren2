@@ -14,17 +14,12 @@
 #include "cmsis_os.h"
 
 #include "DistSens_VL6180X.h"
+#include "DataTransfer.h"
+
 taskState_t distTaskState;
-
-extern SemaphoreHandle_t myBinarySem01Handle;
-
 uint8_t dataBuffer[] ={0,0};
+uint16_t VL6180X_DevAddress = finalDevAddress_VL6180X<<1;			//MMA8451 Address shiftet for I2C use
 
-
-
-//Global variables
-volatile uint16_t VL6180X_DevAddress = finalDevAddress_VL6180X<<1;			//MMA8451 Address shiftet for I2C use
-volatile uint8_t distanceValue = 255; //Default out of range
 
 
 taskState_t VL6180X_Init(void){
@@ -143,8 +138,10 @@ taskState_t VL6180X_Init(void){
 
 
 	return distTaskState;
-
 }
+
+
+
 
 
 taskState_t measureDistanceValue(void){
@@ -159,7 +156,9 @@ taskState_t measureDistanceValue(void){
 	//Finally read range value
 	dataBuffer[0] = 0;
 	if(HAL_I2C_Mem_Read(&hi2c1, VL6180X_DevAddress,0x0062,2, dataBuffer, 1, 100)==HAL_OK);else{distTaskState = TASK_ERROR;};
-	distanceValue = dataBuffer[0];
+
+	//Store the measured Distance Value
+	setDistanceValue(dataBuffer[0]);
 
 	//Clear interrupt status flag
 	dataBuffer[0] = 0x07;
@@ -176,9 +175,3 @@ taskState_t measureDistanceValue(void){
 }
 
 
-
-int8_t getDistanceValue(void){
-	osSemaphoreWait(myBinarySem01Handle, 200);
-	return distanceValue;
-	osSemaphoreRelease(myBinarySem01Handle);
-}
