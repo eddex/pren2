@@ -302,8 +302,7 @@ void StartDefaultTask(void const * argument)
 		}
 
 
-		// TODO implement method PID_InPos in pid.c
-		if (0) /*PID_InPos()*/{
+		if (PID_InPos()){
 			fsm_state = SERVO_RUNTER;
 		}
 		break;
@@ -361,8 +360,7 @@ void StartDefaultTask(void const * argument)
 	case STARTPOSITION:
 		PID_Pos(posStart); // Startposition anfahren
 
-		// TODO implement method PID_InPos in pid.c
-		if (0) /*PID_InPos()*/{
+		if (PID_InPos()){
 			fsm_state = SCHNELLFAHRT;
 		}
 		break;
@@ -435,8 +433,7 @@ void StartDefaultTask(void const * argument)
 	// Positionregelung vor Haltesignal
 	case HALTESIGNAL_STOPPEN:
 		PID_Pos(posHaltesignal+distHaltesignal);
-		// TODO implement method PID_InPos in pid.c
-		if (0) /*PID_InPos()*/{
+		if (PID_InPos()){
 			fsm_state = STOP;
 		}
 		break;
