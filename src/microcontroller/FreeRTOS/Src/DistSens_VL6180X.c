@@ -34,6 +34,9 @@ taskState_t VL6180X_Init(void){
 		if(HAL_I2C_Mem_Read(&hi2c1, VL6180X_DevAddress,0x0016,2, dataBuffer, 1, 100)== HAL_OK){
 			//HAL_GPIO_WritePin(HBridgeEnable_GPIO_Port, HBridgeEnable_Pin, GPIO_PIN_SET);
 		}
+		else if(HAL_I2C_Mem_Read(&hi2c1, VL6180X_DevAddress,0x0016,2, dataBuffer, 1, 100)== HAL_TIMEOUT){
+			HAL_Delay(10);
+		}
 		else{distTaskState = TASK_ERROR;};
 	}while((dataBuffer[0] & 0x01) == 0);
 

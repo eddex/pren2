@@ -10,6 +10,7 @@
 #include "FreeRTOS.h"
 #include "cmsis_os.h"
 
+
 //****************UART**************************************
 flags_UartData_t flags_UartData;
 
@@ -46,7 +47,6 @@ void setDistanceValue(uint8_t value){
 	distanceValue = value;
 	taskEXIT_CRITICAL();
 }
-
 //************************************************************
 
 
@@ -58,15 +58,20 @@ int16_t Yout_g = 0;
 int16_t Zout_g = 0;
 
 void setXValue(uint16_t value){
+	taskENTER_CRITICAL();
 	Xout_g = value;
+	taskEXIT_CRITICAL();
 }
 void setYValue(uint16_t value){
+	taskENTER_CRITICAL();
 	Yout_g = value;
+	taskEXIT_CRITICAL();
 }
 void setZValue(uint16_t value){
+	taskENTER_CRITICAL();
 	Zout_g = value;
+	taskEXIT_CRITICAL();
 }
-
 
 int16_t getXValue(void){
 	return Xout_g;
@@ -78,18 +83,6 @@ int16_t getYValue(void){
 
 int16_t getZValue(void){
 	return Zout_g;
-}
-
-
-
-uint8_t enableSensorTask = 0;
-
-void setEnableSensorTask(uint8_t enable){
-	enableSensorTask = enable;
-}
-
-uint8_t getEnableSensorTask(void){
-	return enableSensorTask;
 }
 //************************************************************
 

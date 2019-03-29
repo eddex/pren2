@@ -11,6 +11,18 @@
 #include <stdint.h>
 
 
+//****************Debug Defines**************************************
+#define FunkFernsteuer_BoardcomputerBetrieb 0		//0 --> Boardcomputer / 1 --> Funkfernsteuerung
+#define SensorTaskEnable 1							//0 --> Disabled / 1 --> Enabled
+#define UARTSendRaspyData 1							//0 --> Disabled / 1 --> Enabled
+
+//Defines for FSM Debugging
+#define FSMTaskEnable 0								//0 --> Disabled / 1 --> Enabled (Currently not used)
+#define WuerfelerkenneUndLaden_TEST 0				//0 --> Disabled / 1 --> Enabled
+//*******************************************************************
+
+
+
 //****************UART**************************************
 
 typedef struct{
@@ -43,8 +55,6 @@ int16_t getXValue(void);
 int16_t getYValue(void);
 int16_t getZValue(void);
 
-void setEnableSensorTask(uint8_t);
-uint8_t getEnableSensorTask(void);
 //************************************************************
 
 

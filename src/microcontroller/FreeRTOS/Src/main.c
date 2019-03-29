@@ -72,7 +72,6 @@
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-#define FunkFernsteuer_BoardcomputerBetrieb 0			//0 --> Boardcomputer / 1 --> Funkfernsteuerung
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -85,7 +84,6 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
-
 
 //*************TIMER variable declaration******************************************
 #define Timer3MaxCounterPeriod 20000	//Variable mit der Timerperiode für die Berechnung des PWMs --> CubeMX Value
@@ -163,14 +161,12 @@ int main(void)
   PID_Init();
   Motor_Init();
 
-  //Configuration of TaskEnable
-  setEnableSensorTask(0);										//Enable = 1 / Disable= 0 -> SensorTask
-
   //If Sensortask enabled
-  if(getEnableSensorTask() == 1){
-	  VL6180X_Init();											//Init of VL6180X Distance Sensor Device
-	  //MMA8451_Init();											//Init of MMA8451 Accel Sensor Device
-  }
+#if SensorTaskEnable
+  HAL_GPIO_WritePin(GPIOF, SHDN_TOF_KLOTZ_Pin, GPIO_PIN_SET);
+  VL6180X_Init();											//Init of VL6180X Distance Sensor Device
+  MMA8451_Init();											//Init of MMA8451 Accel Sensor Device
+#endif
 
   /*
    * *****************UART1 Configuration*************************
@@ -415,11 +411,12 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 	//Real Code
 	HAL_UART_Receive_IT(&huart1, rx_dataUART1_Boardcomputer, 1);	//Restart Interrupt reception mode
 
+	//If one Byte before was the Sync Character
 	if(storeNextByte == 1){
-		setFlagStructure(rx_dataUART1_Boardcomputer[0]);
+		setFlagStructure(rx_dataUART1_Boardcomputer[0]);			//Store the essential Data
 	}
 
-	if(rx_dataUART1_Boardcomputer==0x7f && storeNextByte == 0){		//Sync-Caracter
+	if(rx_dataUART1_Boardcomputer[0]==0x7f && storeNextByte == 0){	//Sync-Caracter detected
 		storeNextByte = 1;
 	}
 	else{

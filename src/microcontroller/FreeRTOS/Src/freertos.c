@@ -85,8 +85,6 @@
 #define MaxLoadAttempts 4 // maximale Anzahl Würfelladeversuche
 #define MaxTrackLength 15000 // maximale Streckenlänge [mm]
 
-
-#define WuerfelerkenneUndLaden_TEST 0
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -252,6 +250,7 @@ void StartDefaultTask(void const * argument)
   for(;;)
   {
 
+#if FSMTaskEnable
 
 	//Statemachine acc. to PREN1 Documentation p.24
 	switch(fsm_state){
@@ -450,7 +449,12 @@ void StartDefaultTask(void const * argument)
 		break;
 	}
     osDelay(50);
+
+#else
+  osDelay(9000);
+#endif
   }
+
   /* USER CODE END StartDefaultTask */
 }
 
@@ -472,31 +476,34 @@ void StartTask02(void const * argument)
   /* Infinite loop */
   for(;;)
   {
-	  //Im Main.c gibt es bei der Initialiserung eine Funktion, die Entscheidet, ob dieser Task ausgeführt wird oder nicht
-	  if(getEnableSensorTask() == 1){
-		  /*if(measureAccel3AxisValues()==TASK_OK){
-			  testInt = getZValue();
-		  }*/
-		  if(measureDistanceValue()==TASK_OK){
-				//testInt = getDistanceValue();
-				//if(testInt <60){
-				//	__NOP();
-				//}
-		  }
-		  //txData[0] = (uint8_t) z;
-		  //txData[1] = (uint8_t) (getZValue() >> 8);
-		  //txData[2] = (uint8_t) (getZValue() & 0xff);
+	#if SensorTaskEnable
 
-		  //txData[0] = getDistanceValue();
-		  //HAL_UART_Transmit(&huart2, txData, 3, 100);
-		  osDelay(100);
-	  }
+	if(measureAccel3AxisValues()==TASK_OK){
+		//testInt = getZValue();
+	}
+	if(measureDistanceValue()==TASK_OK){
+		//testInt = getDistanceValue();
+		//if(testInt <60){
+		//	__NOP();
+		//}
+	}
 
-	  else{
-		  osDelay(5000);
-	  }
 
+
+	//txData[0] = (uint8_t) z;
+	//txData[1] = (uint8_t) (getZValue() >> 8);
+	//txData[2] = (uint8_t) (getZValue() & 0xff);
+
+	//txData[0] = getDistanceValue();
+	//HAL_UART_Transmit(&huart2, txData, 3, 100);
+	osDelay(500);
+
+	#else
+		  osDelay(9000);
+	#endif
   }
+
+
   /* USER CODE END StartTask02 */
 }
 
@@ -513,56 +520,53 @@ void StartTask03(void const * argument)
 	uint8_t firstForwardCount =0;		//Bremst motor vor Seitenwechsel
 	uint8_t firstReverseCount = 0;		//dito
 
-	uint8_t enableTask = 1;
   /* Infinite loop */
   for(;;)
   {
+	#if FunkFernsteuer_BoardcomputerBetrieb
 
-	  if(enableTask == 1){
+	  	//Drehrichtung FORWARD
+	  	if(getDrehrichtung() == 108){
 
-	  	  //Drehrichtung FORWARD
-	  	  if(getDrehrichtung() == 108){
+	  		firstReverseCount = 0;
 
-	  		  firstReverseCount = 0;
-
-	  		  //Break function
-	  		  if(firstForwardCount==0){
-	  			  firstForwardCount++;
-	  			  Motor_Break();
-	  			  osDelay(1000);
-
-	  		  }
-
-	  		  else{													//Drive with UART1 received pwmValue
-	  			  if(PID_GetEnable()==1){
-	  				  PID_Velo((-1)*getfinalVelocity());
-	  				  PID_SetEnable(0);
-	  			  }
-	  		  }
-	  	  }
-
-	  	  	  //Drehrichtung REVERSE
-	  	  else if(getDrehrichtung() == 114){
-	  		  firstForwardCount = 0;
-
-	  		  //Break function
-	  		 if(firstReverseCount==0){
-	  			  firstReverseCount++;
-	  			  Motor_Break();
-	  			  osDelay(1000);
-	  		 }
-
-
-	  		 else{												//Drive with UART1 received pwmVlue
-
-	  				  //Nur alle 10ms!
-	  			if(PID_GetEnable()==1){
-	  				  PID_Velo(getfinalVelocity());
-	  				  PID_SetEnable(0);
-	  			  }
-	  		  }
+	  		//Break function
+	  		if(firstForwardCount==0){
+	  			firstForwardCount++;
+	  			Motor_Break();
+	  			osDelay(1000);
 
 	  		}
+
+	  		else{													//Drive with UART1 received pwmValue
+	  			if(PID_GetEnable()==1){
+	  			PID_Velo((-1)*getfinalVelocity());
+	  			PID_SetEnable(0);
+	  			}
+	  		}
+	  	}
+
+	  		//Drehrichtung REVERSE
+	  		else if(getDrehrichtung() == 114){
+	  			firstForwardCount = 0;
+
+	  		//Break function
+	  		if(firstReverseCount==0){
+	  			firstReverseCount++;
+	  			Motor_Break();
+	  			osDelay(1000);
+	  		}
+
+
+	  		else{												//Drive with UART1 received pwmVlue
+	  			//Nur alle 10ms!
+	  			if(PID_GetEnable()==1){
+	  				PID_Velo(getfinalVelocity());
+	  				PID_SetEnable(0);
+	  			}
+	  		}
+
+	  	}
 
 
 	  	//Imlement a Error Handler witch sets de "drehrichtung" value to 0, if we dont receive Interrupts from UART1
@@ -572,15 +576,12 @@ void StartTask03(void const * argument)
 	  		 __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, 0);
 
 	  	 }
-
 	  	  osDelay(10);
-
-
 	  }
-	  else{
-		  osDelay(5000);
-	  }
+	#else
+  		osDelay(9000);
 
+	#endif
   }
   /* USER CODE END StartTask03 */
 }
@@ -596,27 +597,56 @@ void StartTask04(void const * argument)
 {
   /* USER CODE BEGIN StartTask04 */
   /* Infinite loop */
-	/*
-	   * Servo Angle-Control:
-	   * -90°	=> 1.1ms (PWM_Value = 11 * (480'000Counts / 200) = 26'400
-	   * 0°		=> 1.5ms (PWM_Value = 15 * (480'000Counts / 200) = 36'000
-	   * 90°	=> 1.9ms (PWM_Value = 19 * (480'000Counts / 200) = 45'600
-	 */
 
-	uint8_t enableTask = 0;
-	uint16_t servoPWM = 0;
+  uint8_t UartSendBuffer[11];
+  UartSendBuffer[0] = 0x21;	//Opcode of UART Spec: Respond all Sensor Data
+
+  uint16_t X_Accel_buffer=0;
+  uint16_t Y_Accel_buffer=0;
+  uint16_t Z_Accel_buffer=0;
 
   for(;;)
   {
-	  if(enableTask ==1){
-		  servoPWM = 26400 + getSpeedGroupValue()*2740;
-		  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, servoPWM);
-		  osDelay(50);
-	  }
+	#if UARTSendRaspyData
+	  UartSendBuffer[1] = -1;									//TOF 1: Fail, its not possible to read out both Distance Sensors...
+	  UartSendBuffer[2] = getDistanceValue();					//TOF 2
 
-	  else{
-		  osDelay(5000);
-	  }
+	  #if SensorTaskEnable
+	  X_Accel_buffer = getXValue();
+	  UartSendBuffer[3] = (uint8_t) (X_Accel_buffer >> 8);		//X_Accel_high
+	  UartSendBuffer[4] = (uint8_t) (X_Accel_buffer & 0xff);	//X_Accel_low
+
+	  Y_Accel_buffer = getYValue();
+	  UartSendBuffer[5] = (uint8_t) (Y_Accel_buffer >> 8);		//Y_Accel_high
+	  UartSendBuffer[6] = (uint8_t) (Y_Accel_buffer & 0xff);	//Y_Accel_low
+
+	  Z_Accel_buffer = getZValue();
+	  UartSendBuffer[7] = (uint8_t) (Z_Accel_buffer >> 8);		//Z_Accel_high
+	  UartSendBuffer[8] = (uint8_t) (Z_Accel_buffer & 0xff);	//Z_Accel_low
+
+
+	  #else
+	  UartSendBuffer[3] = -1;
+	  UartSendBuffer[4] = -1;
+	  UartSendBuffer[5] = -1;
+	  UartSendBuffer[6] = -1;
+	  UartSendBuffer[7] = -1;
+	  UartSendBuffer[8] = -1;
+	  #endif
+
+	  UartSendBuffer[9] = -1;		//Servo Data
+	  UartSendBuffer[10] = -1;		//FSM State
+
+	  HAL_UART_Transmit(&huart2, UartSendBuffer, 11, 1000);
+
+	  osDelay(2000);
+
+	  //Implementation to Do
+
+	#else
+	osDelay(9000);
+
+	#endif
 
   }
   /* USER CODE END StartTask04 */
@@ -624,7 +654,35 @@ void StartTask04(void const * argument)
 
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
-     
-/* USER CODE END Application */
+//*************************BackUP of ServoTask************************************
+
+/*
+void StartTask04(void const * argument)
+{
+
+		//Servo Angle-Control:
+		//-90°	=> 1.1ms (PWM_Value = 11 * (480'000Counts / 200) = 26'400
+ 	 	 //0°		=> 1.5ms (PWM_Value = 15 * (480'000Counts / 200) = 36'000
+		//90°	=> 1.9ms (PWM_Value = 19 * (480'000Counts / 200) = 45'600
+
+	uint16_t servoPWM = 0;
+
+  for(;;)
+  {
+	#if ServoTaskEnable
+
+		  servoPWM = 26400 + getSpeedGroupValue()*2740;
+		  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, servoPWM);
+		  osDelay(50);
+
+	#else
+	osDelay(9000);
+
+	#endif
+
+  }
+
+}
+**********************************************************************************/
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
