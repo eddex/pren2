@@ -17,7 +17,7 @@
 #define UARTSendRaspyData 1							//0 --> Disabled / 1 --> Enabled
 
 //Defines for FSM Debugging
-#define FSMTaskEnable 0								//0 --> Disabled / 1 --> Enabled (Currently not used)
+#define FSMTaskEnable 1								//0 --> Disabled / 1 --> Enabled (Currently not used)
 #define WuerfelerkenneUndLaden_TEST 0				//0 --> Disabled / 1 --> Enabled
 //*******************************************************************
 
@@ -27,9 +27,9 @@
 
 typedef struct{
 unsigned int startSignal 	: 1;
-unsigned int RundenCounter 	: 4;
-unsigned int FinalHSerkannt : 1;
-unsigned int singalCounter	: 1;
+unsigned int roundCounter 	: 4;
+unsigned int finalHSerkannt : 1;
+unsigned int signalCounter	: 1;
 unsigned int spareFlag		: 1;
 } flags_UartData_t;
 
