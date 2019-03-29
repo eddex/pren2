@@ -256,16 +256,13 @@ void StartDefaultTask(void const * argument)
 	switch(fsm_state){
 	// Warten auf Startbefehl von Raspi
 	case STARTUP:
-		// TODO implement method getStartSignal in Raspi.c
 		//getStartSignal is available with the function_call "flags_UartData_t getFlagStructure(void)" see for more info in usart.h
-		if (0) /*getStartSignal()*/{
+		if (getFlagStructure().startSignal){
 			//Enable H-Bridge Module of Motor1 and Motor2
 			HAL_GPIO_WritePin(HB_Sleep_GPIO_Port, HB_Sleep_Pin, GPIO_PIN_SET);
 			posStart=Quad_GetPos();
 			fsm_state = WURFEL_ERKENNEN;
 			startTimeMeasurment();											//Zeitmessung beginnen für Abbruchkriterium des Tasks
-			//Achtung PID_Velo immer ausführen!!!!!!!!!
-			PID_Velo(100);													//Motoren starten auf tiefster Geschwindigkeitsstufe
 		}
 
 		#if WuerfelerkenneUndLaden_TEST
@@ -273,14 +270,11 @@ void StartDefaultTask(void const * argument)
 			startTimeMeasurment();											//Zeitmessung beginnen für Abbruchkriterium des Tasks
 			PID_Velo(100);													//Motoren starten auf tiefster Geschwindigkeitsstufe
 		#endif
-
-
-	break;
+		break;
 
 	// Warten bis Würfel erkennt wird
 	case WURFEL_ERKENNEN:
-		//Nicht notwendig, da in Funktion wurfel_erkennen() bereits gemacht wird.
-		//PID_Velo(SlowVelo); // mit langsamer Geschwindigkeit fahren
+		PID_Velo(SlowVelo); // mit langsamer Geschwindigkeit fahren
 
 		taskState = wurfel_erkennen();
 
@@ -379,18 +373,16 @@ void StartDefaultTask(void const * argument)
 		}
 
 		// Anzahl Runden erreicht
-		// TODO implement method getNbrRounds in Raspi.c
-		if (0) /*(getNbrRounds >= MaxNbrRounds)*/{
+		if (getFlagStructure().roundCounter >= MaxNbrRounds){
 			accCtr = 0;
 			fsm_state = BREMSEN;
 		}
 		 // Zu viele Signale erkannt
-		// TODO implement method getNbrSignals in Raspi.c
-		else if (0) /*(getNbrSignals() >= MaxNbrSignals)*/{
+		else if (getFlagStructure().signalCounter >= MaxNbrSignals){
 			accCtr = 0;
 			fsm_state = BREMSEN;
 		}
-		// Gemessene Streck grösser als maximale Streckenlänge
+		// Gemessene Strecke grösser als maximale Streckenlänge
 		else if ((Quad_GetPos()-posStart)>=MaxTrackLength){
 			accCtr = 0;
 			fsm_state = BREMSEN;
@@ -412,8 +404,7 @@ void StartDefaultTask(void const * argument)
 	// Warten auf Signal finales Haltesignal erkannt von Raspi
 	case FINALES_HALTESIGNAL:
 		PID_Velo(SlowVelo);
-		// TODO implement method getHaltesignal in Raspi.c
-		if (0)/*getHaltesignal()*/{ // finales Haltesignal erkannt
+		if (getFlagStructure().finalHSerkannt){ // finales Haltesignal erkannt
 			fsm_state = HALTESIGNAL_ANFAHREN;
 		}
 
