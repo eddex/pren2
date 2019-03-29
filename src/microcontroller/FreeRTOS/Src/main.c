@@ -163,9 +163,11 @@ int main(void)
 
   //If Sensortask enabled
 #if SensorTaskEnable
-  HAL_GPIO_WritePin(GPIOF, SHDN_TOF_KLOTZ_Pin, GPIO_PIN_SET);
+  //HAL_GPIO_WritePin(GPIOF, SHDN_TOF_KLOTZ_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(GPIOF, SHDN_TOF_TAFEL_Pin, GPIO_PIN_SET);
+
   VL6180X_Init();											//Init of VL6180X Distance Sensor Device
-  MMA8451_Init();											//Init of MMA8451 Accel Sensor Device
+  //MMA8451_Init();											//Init of MMA8451 Accel Sensor Device
 #endif
 
   /*

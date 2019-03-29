@@ -478,9 +478,9 @@ void StartTask02(void const * argument)
   {
 	#if SensorTaskEnable
 
-	if(measureAccel3AxisValues()==TASK_OK){
+	/*if(measureAccel3AxisValues()==TASK_OK){
 		//testInt = getZValue();
-	}
+	}*/
 	if(measureDistanceValue()==TASK_OK){
 		//testInt = getDistanceValue();
 		//if(testInt <60){
@@ -654,35 +654,7 @@ void StartTask04(void const * argument)
 
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
-//*************************BackUP of ServoTask************************************
-
-/*
-void StartTask04(void const * argument)
-{
-
-		//Servo Angle-Control:
-		//-90°	=> 1.1ms (PWM_Value = 11 * (480'000Counts / 200) = 26'400
- 	 	 //0°		=> 1.5ms (PWM_Value = 15 * (480'000Counts / 200) = 36'000
-		//90°	=> 1.9ms (PWM_Value = 19 * (480'000Counts / 200) = 45'600
-
-	uint16_t servoPWM = 0;
-
-  for(;;)
-  {
-	#if ServoTaskEnable
-
-		  servoPWM = 26400 + getSpeedGroupValue()*2740;
-		  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, servoPWM);
-		  osDelay(50);
-
-	#else
-	osDelay(9000);
-
-	#endif
-
-  }
-
-}
-**********************************************************************************/
+     
+/* USER CODE END Application */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
