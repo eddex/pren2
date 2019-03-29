@@ -167,7 +167,7 @@ int main(void)
   HAL_GPIO_WritePin(GPIOF, SHDN_TOF_TAFEL_Pin, GPIO_PIN_SET);
 
   VL6180X_Init();											//Init of VL6180X Distance Sensor Device
-  //MMA8451_Init();											//Init of MMA8451 Accel Sensor Device
+  MMA8451_Init();											//Init of MMA8451 Accel Sensor Device
 #endif
 
   /*
@@ -263,9 +263,6 @@ int main(void)
   HAL_TIM_Base_Start_IT(&htim15);
   //********************************************************************
 
-
-  //Enable H-Bridge Module of Motor1 and Motor2
-  HAL_GPIO_WritePin(HB_Sleep_GPIO_Port, HB_Sleep_Pin, GPIO_PIN_SET);
   SEGGER_SYSVIEW_Conf(); // Start SystemViewer
 
   /* USER CODE END 2 */

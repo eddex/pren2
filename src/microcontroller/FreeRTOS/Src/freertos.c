@@ -259,6 +259,8 @@ void StartDefaultTask(void const * argument)
 		// TODO implement method getStartSignal in Raspi.c
 		//getStartSignal is available with the function_call "flags_UartData_t getFlagStructure(void)" see for more info in usart.h
 		if (0) /*getStartSignal()*/{
+			//Enable H-Bridge Module of Motor1 and Motor2
+			HAL_GPIO_WritePin(HB_Sleep_GPIO_Port, HB_Sleep_Pin, GPIO_PIN_SET);
 			posStart=Quad_GetPos();
 			fsm_state = WURFEL_ERKENNEN;
 			startTimeMeasurment();											//Zeitmessung beginnen für Abbruchkriterium des Tasks
