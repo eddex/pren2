@@ -77,8 +77,6 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define SlowVelo 500 // langsame Geschwindigkeit [mm/s]
-#define DistTofToWurfel 100 // Distanz zwischen Tof und Würfel
-#define WurfelLength 50 // Würfellänge
 #define MaxVelo 2000 // maximale Geschwindigkeit [mm/s]
 #define MaxNbrSignals 10 // maximale Anzahl Signale auf der Strecke
 #define MaxNbrRounds 2 // maximale Anzahl Runden
@@ -236,7 +234,6 @@ void StartDefaultTask(void const * argument)
   uint8_t wurfelCtr = 0; // Zähler Anzahl Ladeversuche
 
   int32_t posStart = 0;	// Positionsmerker bei Startsignal
-  int32_t posWurfel = 0; // Positionsmerker Würfel erkannt
   int32_t posHaltesignal = 0; // Positionsmerker Haltesignal erkannt
   int32_t distHaltesignal = 0; // Distanz zum Haltesignal
 
@@ -280,8 +277,6 @@ void StartDefaultTask(void const * argument)
 		taskState = wurfel_erkennen(100);
 
 		if(taskState == TASK_OK){
-			posWurfel = Quad_GetPos();
-			//fsm_state = WURFEL_VORFAHREN;
 			fsm_state = SERVO_RUNTER;
 			HAL_GPIO_WritePin(LED_Heartbeat_GPIO_Port, LED_Heartbeat_Pin, GPIO_PIN_SET);
 		}
@@ -291,18 +286,6 @@ void StartDefaultTask(void const * argument)
 		}
 		else{}
 
-		break;
-
-	// Vorfahren mit Lademechanismus zum Würfel
-	case WURFEL_VORFAHREN:
-		if(0){
-			PID_Pos(posWurfel+DistTofToWurfel); // An Würfelposition fahren
-		}
-
-
-		if (PID_InPos()){
-			fsm_state = SERVO_RUNTER;
-		}
 		break;
 
 	// Lademechanismus nach unten fahren
@@ -328,30 +311,25 @@ void StartDefaultTask(void const * argument)
 			servoAngle = Servo_GetAngle(); // Winkel auslesen
 			Servo_SetAngle(--servoAngle); // Winkel verkleinern
 			if (servoAngle <= 0){
-				fsm_state = WURFEL_ZURUCKFAHREN;
+				fsm_state = WURFEL_KONTROLLE;
 				__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 0);		//Entlastet PWM von Servomotor, damit am Anschlag nicht weitergefahren wird.
 			}
 		}
 		break;
 
-	// Würfelsensor zur Erkennposition zurückfahren -> Kontrolle Würfel geladen
-	case WURFEL_ZURUCKFAHREN:
-		//PID_Pos(posWurfel-DistTofToWurfel); // Zurückfahren zur Würfelerkennposition
-
-		//Achtung Würfel ist im Abstand von 2 cm falls er erfolgreich geladen wurde!
-		//Evtl. Distanz als Parameter übergeben...
-		if(wurfel_erkennen(20)==TASK_OK){
+	// Kontrolle Würfel geladen
+	case WURFEL_KONTROLLE:
+		if(wurfel_erkennen(20)==TASK_OK){  // Würfel ist aufgeladen
 			wurfelCtr++;
 			if (wurfelCtr >= MaxLoadAttempts){ // maximale Anzahl Versuche erreicht
 				wurfelCtr=0;
 				fsm_state = STARTPOSITION;
 			}
 			else{
-				posWurfel = Quad_GetPos()-WurfelLength;
-				fsm_state = WURFEL_VORFAHREN;
+				fsm_state = SERVO_RUNTER;
 			}
 		}
-		else{ // TimeOut -> Würfel ist aufgeladen
+		else{ // TimeOut
 			wurfelCtr=0;
 			fsm_state = STARTPOSITION;
 		}
@@ -412,7 +390,6 @@ void StartDefaultTask(void const * argument)
 		if (getFlagStructure().finalHSerkannt){ // finales Haltesignal erkannt
 			fsm_state = HALTESIGNAL_ANFAHREN;
 		}
-
 		break;
 
 	// Haltesignal mit TOF erkennen
@@ -438,7 +415,7 @@ void StartDefaultTask(void const * argument)
 
 	// Warten bis Startsignal von Raspi zurückgenommen wird
 	case STOP:
-		if (0) /*!getStartSignal()*/{
+		if (!getStartSignal()){
 			fsm_state = STARTUP;
 		}
 		break;
