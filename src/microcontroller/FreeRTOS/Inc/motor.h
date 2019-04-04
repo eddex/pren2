@@ -14,7 +14,7 @@
 #define Wirkumfang Wirkdurchmesser * 3.141 // Wirkdurchmesser * Pi [mm]
 #define Frequency 100 // Aufruffrequenz (10ms = 100Hz)
 
-#define PWM_MAX_VALUE 20000
+#define PWM_MAX_VALUE 500
 
 // Init Routine
 void Motor_Init();

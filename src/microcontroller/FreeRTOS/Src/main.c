@@ -86,7 +86,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart);
 /* USER CODE BEGIN 0 */
 
 //*************TIMER variable declaration******************************************
-#define Timer3MaxCounterPeriod 20000	//Variable mit der Timerperiode für die Berechnung des PWMs --> CubeMX Value
+#define Timer3MaxCounterPeriod 500	//Variable mit der Timerperiode für die Berechnung des PWMs --> CubeMX Value
 uint8_t tim15Count10ms = 0;				//Variable die im TIM15 overflow incrementiert wird und für eine 10ms Zeitbasis verwendet wird
 
 //*************UART variable declaration******************************************

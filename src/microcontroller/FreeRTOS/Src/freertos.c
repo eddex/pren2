@@ -266,9 +266,10 @@ void StartDefaultTask(void const * argument)
 		}
 
 		#if WuerfelerkenneUndLaden_TEST
-			fsm_state = WURFEL_ERKENNEN;
-			startTimeMeasurment();											//Zeitmessung beginnen für Abbruchkriterium des Tasks
-			PID_Velo(100);													//Motoren starten auf tiefster Geschwindigkeitsstufe
+		//Enable H-Bridge Module of Motor1 and Motor2
+		HAL_GPIO_WritePin(HB_Sleep_GPIO_Port, HB_Sleep_Pin, GPIO_PIN_SET);
+		fsm_state = WURFEL_ERKENNEN;
+		startTimeMeasurment();											//Zeitmessung beginnen für Abbruchkriterium des Tasks
 		#endif
 		break;
 
@@ -438,7 +439,7 @@ void StartDefaultTask(void const * argument)
 		}
 		break;
 	}
-    osDelay(50);
+    osDelay(10);
 
 #else
   osDelay(9000);
