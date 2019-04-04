@@ -86,7 +86,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart);
 /* USER CODE BEGIN 0 */
 
 //*************TIMER variable declaration******************************************
-#define Timer3MaxCounterPeriod 500	//Variable mit der Timerperiode für die Berechnung des PWMs --> CubeMX Value
+//#define Timer3MaxCounterPeriod 500	//Variable mit der Timerperiode für die Berechnung des PWMs --> CubeMX Value
 uint8_t tim15Count10ms = 0;				//Variable die im TIM15 overflow incrementiert wird und für eine 10ms Zeitbasis verwendet wird
 
 //*************UART variable declaration******************************************
@@ -120,6 +120,7 @@ uint8_t sendToRaspy[11];
 int main(void)
 {
   /* USER CODE BEGIN 1 */
+	HAL_GPIO_WritePin(HB_Sleep_GPIO_Port, HB_Sleep_Pin, GPIO_PIN_RESET);
   /* USER CODE END 1 */
 
   /* MCU Configuration----------------------------------------------------------*/
@@ -160,6 +161,7 @@ int main(void)
   Velo_Init();
   PID_Init();
   Motor_Init();
+  Servo_Init();
 
   //If Sensortask enabled
 #if SensorTaskEnable
@@ -213,7 +215,7 @@ int main(void)
   HAL_TIM_PWM_Start_IT(&htim2, TIM_CHANNEL_2);
 
   //Channel Compare Value --> PWM Dutycycle
-  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 36000);				//Servomotor Default Position 0°
+  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 26400);				//Servomotor Default Position 0°
   //****************************************************************
 
 

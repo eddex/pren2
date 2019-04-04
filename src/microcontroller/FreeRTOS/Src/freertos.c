@@ -76,7 +76,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define SlowVelo 100 // langsame Geschwindigkeit [mm/s]
+#define SlowVelo 500 // langsame Geschwindigkeit [mm/s]
 #define DistTofToWurfel 100 // Distanz zwischen Tof und Würfel
 #define WurfelLength 50 // Würfellänge
 #define MaxVelo 2000 // maximale Geschwindigkeit [mm/s]
@@ -281,7 +281,8 @@ void StartDefaultTask(void const * argument)
 
 		if(taskState == TASK_OK){
 			posWurfel = Quad_GetPos();
-			fsm_state = WURFEL_VORFAHREN;
+			//fsm_state = WURFEL_VORFAHREN;
+			fsm_state = SERVO_RUNTER;
 			HAL_GPIO_WritePin(LED_Heartbeat_GPIO_Port, LED_Heartbeat_Pin, GPIO_PIN_SET);
 		}
 		else if(taskState == TASK_TIME_OVERFLOW){ // Würfel nicht erkannt
@@ -294,7 +295,7 @@ void StartDefaultTask(void const * argument)
 
 	// Vorfahren mit Lademechanismus zum Würfel
 	case WURFEL_VORFAHREN:
-		if(1){
+		if(0){
 			PID_Pos(posWurfel+DistTofToWurfel); // An Würfelposition fahren
 		}
 
@@ -309,10 +310,10 @@ void StartDefaultTask(void const * argument)
 
 		//Evtl. Os_delay() Funktion verwenden damit Würfel nicht mit Lichtgeschwindigkeit aufgelanden wird?
 		servoCtr++;
-		if (servoCtr>=100){
+		if (servoCtr>=5){
 			servoCtr=0;
 			servoAngle = Servo_GetAngle(); // Winkel auslesen
-			Servo_SetAngle(servoAngle++); // Winkel vergrössern
+			Servo_SetAngle(++servoAngle); // Winkel vergrössern
 			if (servoAngle >= 90){
 				fsm_state = SERVO_RAUF;
 			}
@@ -322,20 +323,23 @@ void StartDefaultTask(void const * argument)
 	// Lademechanismus nach oben fahren
 	case SERVO_RAUF:
 		servoCtr++;
-		if (servoCtr>=100){
+		if (servoCtr>=5){
 			servoCtr=0;
 			servoAngle = Servo_GetAngle(); // Winkel auslesen
-			Servo_SetAngle(servoAngle--); // Winkel verkleinern
+			Servo_SetAngle(--servoAngle); // Winkel verkleinern
 			if (servoAngle <= 0){
 				fsm_state = WURFEL_ZURUCKFAHREN;
+				__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 0);		//Entlastet PWM von Servomotor, damit am Anschlag nicht weitergefahren wird.
 			}
 		}
 		break;
 
 	// Würfelsensor zur Erkennposition zurückfahren -> Kontrolle Würfel geladen
 	case WURFEL_ZURUCKFAHREN:
-		PID_Pos(posWurfel-DistTofToWurfel); // Zurückfahren zur Würfelerkennposition
+		//PID_Pos(posWurfel-DistTofToWurfel); // Zurückfahren zur Würfelerkennposition
 
+		//Achtung Würfel ist im Abstand von 2 cm falls er erfolgreich geladen wurde!
+		//Evtl. Distanz als Parameter übergeben...
 		if(wurfel_erkennen()==TASK_OK){
 			wurfelCtr++;
 			if (wurfelCtr >= MaxLoadAttempts){ // maximale Anzahl Versuche erreicht
@@ -511,6 +515,10 @@ void StartTask03(void const * argument)
 	uint8_t firstForwardCount =0;		//Bremst motor vor Seitenwechsel
 	uint8_t firstReverseCount = 0;		//dito
 
+	//Allow H_Bridge to Control the Motors
+	HAL_GPIO_WritePin(HB_Sleep_GPIO_Port, HB_Sleep_Pin, GPIO_PIN_SET);
+
+
   /* Infinite loop */
   for(;;)
   {
@@ -571,9 +579,9 @@ void StartTask03(void const * argument)
 	  }
 	#else
   		osDelay(9000);
-
+	}
 	#endif
-  }
+
   /* USER CODE END StartTask03 */
 }
 
