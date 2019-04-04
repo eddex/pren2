@@ -277,7 +277,7 @@ void StartDefaultTask(void const * argument)
 	case WURFEL_ERKENNEN:
 		PID_Velo(SlowVelo); // mit langsamer Geschwindigkeit fahren
 
-		taskState = wurfel_erkennen();
+		taskState = wurfel_erkennen(100);
 
 		if(taskState == TASK_OK){
 			posWurfel = Quad_GetPos();
@@ -340,7 +340,7 @@ void StartDefaultTask(void const * argument)
 
 		//Achtung Würfel ist im Abstand von 2 cm falls er erfolgreich geladen wurde!
 		//Evtl. Distanz als Parameter übergeben...
-		if(wurfel_erkennen()==TASK_OK){
+		if(wurfel_erkennen(20)==TASK_OK){
 			wurfelCtr++;
 			if (wurfelCtr >= MaxLoadAttempts){ // maximale Anzahl Versuche erreicht
 				wurfelCtr=0;
