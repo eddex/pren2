@@ -63,6 +63,7 @@
 #include "quad.h"
 #include "motor.h"
 #include "pid.h"
+#include "servo.h"
 #include "DataTransfer.h"
 #include "SEGGER/SEGGER_SYSVIEW.h"
 
@@ -380,22 +381,22 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 		setfinalVelocity(100);
 	}
 	else if (receivedSpeedValue == 2){
-		setfinalVelocity(150);
-	}
-	else if (receivedSpeedValue == 3){
-		setfinalVelocity(200);
-	}
-	else if (receivedSpeedValue == 4){
 		setfinalVelocity(300);
 	}
-	else if (receivedSpeedValue == 5){
-		setfinalVelocity(400);
-	}
-	else if (receivedSpeedValue == 6){
+	else if (receivedSpeedValue == 3){
 		setfinalVelocity(500);
 	}
+	else if (receivedSpeedValue == 4){
+		setfinalVelocity(1000);
+	}
+	else if (receivedSpeedValue == 5){
+		setfinalVelocity(1500);
+	}
+	else if (receivedSpeedValue == 6){
+		setfinalVelocity(2000);
+	}
 	else{
-		setfinalVelocity(700);
+		setfinalVelocity(3000);
 	}
 
 

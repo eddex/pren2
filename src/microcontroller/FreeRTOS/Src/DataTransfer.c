@@ -30,7 +30,6 @@ flags_UartData_t getFlagStructure(void){
 
 
 
-
 //****************VL6180X**************************************
 uint8_t distanceValue = 0; //Default out of range
 

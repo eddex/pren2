@@ -76,8 +76,8 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define SlowVelo 500 // langsame Geschwindigkeit [mm/s]
-#define MaxVelo 2000 // maximale Geschwindigkeit [mm/s]
+#define SlowVelo 100 // langsame Geschwindigkeit [mm/s]
+#define MaxVelo 3000 // maximale Geschwindigkeit [mm/s]
 #define MaxNbrSignals 10 // maximale Anzahl Signale auf der Strecke
 #define MaxNbrRounds 2 // maximale Anzahl Runden
 #define MaxLoadAttempts 4 // maximale Anzahl Würfelladeversuche
@@ -238,7 +238,6 @@ void StartDefaultTask(void const * argument)
   int32_t distHaltesignal = 0; // Distanz zum Haltesignal
 
   uint32_t servoCtr = 0; // Zähler um Servo langsam zu bewegen
-  uint32_t accCtr = 0; // Zähler um Motoren langsam zu beschleunigen
 
   uint8_t servoAngle = 0; // Winkelmerker Servo
   uint16_t speed = 0; // Geschwindigkeit der Motoren
@@ -272,31 +271,28 @@ void StartDefaultTask(void const * argument)
 
 	// Warten bis Würfel erkennt wird
 	case WURFEL_ERKENNEN:
-		PID_Velo(SlowVelo); // mit langsamer Geschwindigkeit fahren
+		PID_Velo(SlowVelo); //Mit langsamer Geschwindigkeit fahren
 
-		taskState = wurfel_erkennen(100);
+		taskState = wurfel_erkennen(130); //Versuche den Wüfel in einer Distanz bis zu 13cm zu erkennen
 
 		if(taskState == TASK_OK){
 			fsm_state = SERVO_RUNTER;
-			HAL_GPIO_WritePin(LED_Heartbeat_GPIO_Port, LED_Heartbeat_Pin, GPIO_PIN_SET);
 		}
 		else if(taskState == TASK_TIME_OVERFLOW){ // Würfel nicht erkannt
 			fsm_state = STARTPOSITION;
-			HAL_GPIO_WritePin(LED_Heartbeat_GPIO_Port, LED_Heartbeat_Pin, GPIO_PIN_SET);
 		}
 		else{}
 
 		break;
 
 	// Lademechanismus nach unten fahren
+	// Der Winkel wird alle 50ms um 1° erhöht.
 	case SERVO_RUNTER:
-
-		//Evtl. Os_delay() Funktion verwenden damit Würfel nicht mit Lichtgeschwindigkeit aufgelanden wird?
 		servoCtr++;
 		if (servoCtr>=5){
 			servoCtr=0;
-			servoAngle = Servo_GetAngle(); // Winkel auslesen
-			Servo_SetAngle(++servoAngle); // Winkel vergrössern
+			servoAngle = Servo_GetAngle(); 	// Winkel auslesen
+			Servo_SetAngle(++servoAngle); 	// Winkel vergrössern
 			if (servoAngle >= 90){
 				fsm_state = SERVO_RAUF;
 			}
@@ -304,6 +300,7 @@ void StartDefaultTask(void const * argument)
 		break;
 
 	// Lademechanismus nach oben fahren
+	// Der Winkel wird alle 50ms um 1° verringert.
 	case SERVO_RAUF:
 		servoCtr++;
 		if (servoCtr>=5){
@@ -312,76 +309,81 @@ void StartDefaultTask(void const * argument)
 			Servo_SetAngle(--servoAngle); // Winkel verkleinern
 			if (servoAngle <= 0){
 				fsm_state = WURFEL_KONTROLLE;
+				startTimeMeasurment();
 				__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 0);		//Entlastet PWM von Servomotor, damit am Anschlag nicht weitergefahren wird.
 			}
 		}
 		break;
 
 	// Kontrolle Würfel geladen
+	// Falls er erfolgreich geladen wurde, wird die Startposition angefahren
+	// Falls nicht geladen, werden weitere Ladeversuche gestartet
 	case WURFEL_KONTROLLE:
-		if(wurfel_erkennen(20)==TASK_OK){  // Würfel ist aufgeladen
+		if(wurfel_erkennen(40)==TASK_OK){  // Wenn Objekt in einem Abstand von bis zu 4cm erkannt wurde --> Würfel geladen
+			wurfelCtr=0;
+			fsm_state = STARTPOSITION;
+		}
+		else{
 			wurfelCtr++;
 			if (wurfelCtr >= MaxLoadAttempts){ // maximale Anzahl Versuche erreicht
-				wurfelCtr=0;
 				fsm_state = STARTPOSITION;
 			}
 			else{
+				//Versuche erneut den Würfel zu greifen
 				fsm_state = SERVO_RUNTER;
 			}
-		}
-		else{ // TimeOut
-			wurfelCtr=0;
-			fsm_state = STARTPOSITION;
 		}
 		break;
 
 	// Startposition anfahren -> Anlauf holen
 	case STARTPOSITION:
-		PID_Pos(posStart); // Startposition anfahren
+		PID_Velo(-SlowVelo); // Mit langsamer Geschwindigkeit an die ursprüngliche Position zurück fahren
 
-		if (PID_InPos()){
+		//Wenn die ursprüngliche Position beim zurückfahren erreicht wurde
+		if (Quad_GetPos()<posStart){
+			Motor_Break();
 			fsm_state = SCHNELLFAHRT;
 		}
+
+		/*if (PID_InPos()){
+			fsm_state = SCHNELLFAHRT;
+		}*/
 		break;
 
 	// Schnellfahrt (Beschleunigen und Abbruchkriterien checken)
 	case SCHNELLFAHRT:
-		accCtr++;
-		if (accCtr>=100){
-			speed++;
-			if (speed >= MaxVelo){
-				speed = MaxVelo;
-			}
-			PID_Velo(speed);
+
+		// Momentan wird maximal eine Strecke von 15m gefahren!
+
+		//Geschwindigkeitsrampe bis max.Speed
+		speed+=10;
+		if (speed >= MaxVelo){
+			speed = MaxVelo;
 		}
+		PID_Velo(speed);
 
 		// Anzahl Runden erreicht
 		if (getFlagStructure().roundCounter >= MaxNbrRounds){
-			accCtr = 0;
 			fsm_state = BREMSEN;
 		}
 		 // Zu viele Signale erkannt
 		else if (getFlagStructure().signalCounter >= MaxNbrSignals){
-			accCtr = 0;
 			fsm_state = BREMSEN;
 		}
 		// Gemessene Strecke grösser als maximale Streckenlänge
-		else if ((Quad_GetPos()-posStart)>=MaxTrackLength){
-			accCtr = 0;
+		else if ((Quad_GetPos()-posStart)>=((MaxTrackLength * iGetriebe * TicksPerRev) / (Wirkumfang))){
 			fsm_state = BREMSEN;
 		}
 		break;
 
 	// Abbremsen zur Haltesignalerkennung
 	case BREMSEN:
-		accCtr++;
-		if (accCtr>=100){
-			speed--;
-			if (speed <= SlowVelo){
-				fsm_state = FINALES_HALTESIGNAL;
-			}
-			PID_Velo(speed);
+		speed-=10;
+		if (speed <= SlowVelo){
+			fsm_state = FINALES_HALTESIGNAL;
 		}
+		PID_Velo(speed);
+
 		break;
 
 	// Warten auf Signal finales Haltesignal erkannt von Raspi
@@ -415,7 +417,7 @@ void StartDefaultTask(void const * argument)
 
 	// Warten bis Startsignal von Raspi zurückgenommen wird
 	case STOP:
-		if (!getStartSignal()){
+		if (!(getFlagStructure().startSignal)){	//!getStartSignal() Was meinst du mit dem Andi?
 			fsm_state = STARTUP;
 		}
 		break;
