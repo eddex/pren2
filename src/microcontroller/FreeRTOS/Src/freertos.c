@@ -76,9 +76,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define SlowVelo 100 // langsame Geschwindigkeit [mm/s]
-#define DistTofToWurfel 100 // Distanz zwischen Tof und Würfel
-#define WurfelLength 50 // Würfellänge
+#define SlowVelo 500 // langsame Geschwindigkeit [mm/s]
 #define MaxVelo 2000 // maximale Geschwindigkeit [mm/s]
 #define MaxNbrSignals 10 // maximale Anzahl Signale auf der Strecke
 #define MaxNbrRounds 2 // maximale Anzahl Runden
@@ -236,7 +234,6 @@ void StartDefaultTask(void const * argument)
   uint8_t wurfelCtr = 0; // Zähler Anzahl Ladeversuche
 
   int32_t posStart = 0;	// Positionsmerker bei Startsignal
-  int32_t posWurfel = 0; // Positionsmerker Würfel erkannt
   int32_t posHaltesignal = 0; // Positionsmerker Haltesignal erkannt
   int32_t distHaltesignal = 0; // Distanz zum Haltesignal
 
@@ -277,11 +274,10 @@ void StartDefaultTask(void const * argument)
 	case WURFEL_ERKENNEN:
 		PID_Velo(SlowVelo); // mit langsamer Geschwindigkeit fahren
 
-		taskState = wurfel_erkennen();
+		taskState = wurfel_erkennen(100);
 
 		if(taskState == TASK_OK){
-			posWurfel = Quad_GetPos();
-			fsm_state = WURFEL_VORFAHREN;
+			fsm_state = SERVO_RUNTER;
 			HAL_GPIO_WritePin(LED_Heartbeat_GPIO_Port, LED_Heartbeat_Pin, GPIO_PIN_SET);
 		}
 		else if(taskState == TASK_TIME_OVERFLOW){ // Würfel nicht erkannt
@@ -292,27 +288,15 @@ void StartDefaultTask(void const * argument)
 
 		break;
 
-	// Vorfahren mit Lademechanismus zum Würfel
-	case WURFEL_VORFAHREN:
-		if(1){
-			PID_Pos(posWurfel+DistTofToWurfel); // An Würfelposition fahren
-		}
-
-
-		if (PID_InPos()){
-			fsm_state = SERVO_RUNTER;
-		}
-		break;
-
 	// Lademechanismus nach unten fahren
 	case SERVO_RUNTER:
 
 		//Evtl. Os_delay() Funktion verwenden damit Würfel nicht mit Lichtgeschwindigkeit aufgelanden wird?
 		servoCtr++;
-		if (servoCtr>=100){
+		if (servoCtr>=5){
 			servoCtr=0;
 			servoAngle = Servo_GetAngle(); // Winkel auslesen
-			Servo_SetAngle(servoAngle++); // Winkel vergrössern
+			Servo_SetAngle(++servoAngle); // Winkel vergrössern
 			if (servoAngle >= 90){
 				fsm_state = SERVO_RAUF;
 			}
@@ -322,32 +306,30 @@ void StartDefaultTask(void const * argument)
 	// Lademechanismus nach oben fahren
 	case SERVO_RAUF:
 		servoCtr++;
-		if (servoCtr>=100){
+		if (servoCtr>=5){
 			servoCtr=0;
 			servoAngle = Servo_GetAngle(); // Winkel auslesen
-			Servo_SetAngle(servoAngle--); // Winkel verkleinern
+			Servo_SetAngle(--servoAngle); // Winkel verkleinern
 			if (servoAngle <= 0){
-				fsm_state = WURFEL_ZURUCKFAHREN;
+				fsm_state = WURFEL_KONTROLLE;
+				__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 0);		//Entlastet PWM von Servomotor, damit am Anschlag nicht weitergefahren wird.
 			}
 		}
 		break;
 
-	// Würfelsensor zur Erkennposition zurückfahren -> Kontrolle Würfel geladen
-	case WURFEL_ZURUCKFAHREN:
-		PID_Pos(posWurfel-DistTofToWurfel); // Zurückfahren zur Würfelerkennposition
-
-		if(wurfel_erkennen()==TASK_OK){
+	// Kontrolle Würfel geladen
+	case WURFEL_KONTROLLE:
+		if(wurfel_erkennen(20)==TASK_OK){  // Würfel ist aufgeladen
 			wurfelCtr++;
 			if (wurfelCtr >= MaxLoadAttempts){ // maximale Anzahl Versuche erreicht
 				wurfelCtr=0;
 				fsm_state = STARTPOSITION;
 			}
 			else{
-				posWurfel = Quad_GetPos()-WurfelLength;
-				fsm_state = WURFEL_VORFAHREN;
+				fsm_state = SERVO_RUNTER;
 			}
 		}
-		else{ // TimeOut -> Würfel ist aufgeladen
+		else{ // TimeOut
 			wurfelCtr=0;
 			fsm_state = STARTPOSITION;
 		}
@@ -408,7 +390,6 @@ void StartDefaultTask(void const * argument)
 		if (getFlagStructure().finalHSerkannt){ // finales Haltesignal erkannt
 			fsm_state = HALTESIGNAL_ANFAHREN;
 		}
-
 		break;
 
 	// Haltesignal mit TOF erkennen
@@ -434,7 +415,7 @@ void StartDefaultTask(void const * argument)
 
 	// Warten bis Startsignal von Raspi zurückgenommen wird
 	case STOP:
-		if (0) /*!getStartSignal()*/{
+		if (!getStartSignal()){
 			fsm_state = STARTUP;
 		}
 		break;
@@ -511,6 +492,10 @@ void StartTask03(void const * argument)
 	uint8_t firstForwardCount =0;		//Bremst motor vor Seitenwechsel
 	uint8_t firstReverseCount = 0;		//dito
 
+	//Allow H_Bridge to Control the Motors
+	HAL_GPIO_WritePin(HB_Sleep_GPIO_Port, HB_Sleep_Pin, GPIO_PIN_SET);
+
+
   /* Infinite loop */
   for(;;)
   {
@@ -571,9 +556,9 @@ void StartTask03(void const * argument)
 	  }
 	#else
   		osDelay(9000);
-
+	}
 	#endif
-  }
+
   /* USER CODE END StartTask03 */
 }
 

@@ -28,22 +28,19 @@
 uint8_t storeDistanceValue = 0;
 uint16_t storeTimeMeasurement = 0;
 
-taskState_t wurfel_erkennen(void){
+taskState_t wurfel_erkennen(uint8_t distance){
 
 	//Vorwärts fahren und auf Würfelekrennung warten, Abbruch nach 15s nichts erkennen
+	storeDistanceValue = getDistanceValue();
+	storeTimeMeasurement = getTimeMeasurement();
 
-	if(((storeDistanceValue>60)&&(storeTimeMeasurement<1500)) || (storeDistanceValue<5)){
-		storeDistanceValue = getDistanceValue();
-		storeTimeMeasurement = getTimeMeasurement();
-	}
-	else{
-		Motor_Break();//Motoren stoppen wenn Distanz zum Würfel im Bereich von x (mm) - y (mm) ist ODER Time overflow
-	}
 
 	if(storeTimeMeasurement>=1499){
+		Motor_Break();
 		return TASK_TIME_OVERFLOW;
 	}
-	else if(storeDistanceValue<=60){
+	else if((storeDistanceValue<=distance) && (storeDistanceValue>5)){
+		Motor_Break();//Motoren stoppen wenn Distanz zum Würfel im Bereich von x (mm) - y (mm) ist ODER Time overflow
 		return TASK_OK;
 	}
 	else{
