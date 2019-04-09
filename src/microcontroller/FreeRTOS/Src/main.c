@@ -100,16 +100,13 @@ uint16_t pwmValue = 0;				//(not used) Finally used pwmValue for the pwm generat
 //Receive DAta from Boardcomputer
 uint8_t rx_dataUART1_Boardcomputer[]={0,0};
 uint8_t storeFlagValue = 0;
-
-//debugVariable
-uint8_t tx_dataUART2[] = {0};		//Transmit Data Buffer for UART2 Debugging
-
-uint8_t raspyUARTDebug[20];
-uint8_t raspyDataCounter = 0;
-uint8_t raspyUartReceive[3];
 uint8_t storeNextByte = 0;
 
-uint8_t sendToRaspy[11];
+
+//debugVariable
+uint8_t tx_dataUART2[] = {0,0,0,0};		//Transmit Data Buffer for UART2 Debugging
+
+
 //******************************************************************************************
 /* USER CODE END 0 */
 
@@ -425,32 +422,21 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 		storeNextByte = 0;
 	}
 
-	/************Debug with Raspy*********************************
-	HAL_UART_Receive_IT(&huart1, rx_dataUART1_Boardcomputer, 1);		//Restart Interrupt reception mode
-	if(rx_dataUART1_Boardcomputer[0] == 0x7F){							//SYNC-Zeichen -->0111'1111
-		setFlagStructure(rx_dataUART1_Boardcomputer[1]);				//Save Received UART Data in Structure
-	}
-	raspyUARTDebug[raspyDataCounter] = rx_dataUART1_Boardcomputer[0];
-	raspyDataCounter++;
 
-	if(raspyDataCounter == 3){
-		raspyDataCounter =0;
-		setFlagStructure(raspyUARTDebug[2]);
 
-		sendToRaspy[0] = 0x21;
-		for(int i = 1; i<=10;i++){
-			sendToRaspy[i]=i;
-		}
-		HAL_UART_Transmit(&huart1, sendToRaspy, 11, 1000);
+	//Debug via UART2 Virtual Comport-------------
+	tx_dataUART2[0] = getFlagStructure().startSignal;
+	tx_dataUART2[1] = getFlagStructure().finalHSerkannt;
+	tx_dataUART2[2] = getFlagStructure().roundCounter;
+	tx_dataUART2[3] = getFlagStructure().signalCounter;
 
-	}
+	HAL_UART_Transmit(&huart2, tx_dataUART2, 4, 1000);
+	//----------------------------------------------
 
-	if(getFlagStructure().startSignal == 1){
-		PID_Velo(200);
-	}
-	else{
-		PID_Velo(0);
-	}**************************************************************/
+
+
+
+
 
 
 #endif

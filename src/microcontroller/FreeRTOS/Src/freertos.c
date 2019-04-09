@@ -389,6 +389,10 @@ void StartDefaultTask(void const * argument)
 	// Warten auf Signal finales Haltesignal erkannt von Raspi
 	case FINALES_HALTESIGNAL:
 		PID_Velo(SlowVelo);
+		//Annahme, dass finales Haltesignal nie erkannt wird --> Bsp. Signal Counter bleit konstant...
+		//Abbruchbedingung für Schwenken der weissen Flagge definieren...
+		//ToDo
+
 		if (getFlagStructure().finalHSerkannt){ // finales Haltesignal erkannt
 			fsm_state = HALTESIGNAL_ANFAHREN;
 		}
@@ -615,7 +619,12 @@ void StartTask04(void const * argument)
 	  UartSendBuffer[9] = -1;		//Servo Data
 	  UartSendBuffer[10] = -1;		//FSM State
 
+	  HAL_UART_Transmit(&huart1, UartSendBuffer, 11, 1000);
+
+
+	  //*********Virtual Comport UART Debug**************
 	  HAL_UART_Transmit(&huart2, UartSendBuffer, 11, 1000);
+	  //*************************************************
 
 	  osDelay(2000);
 
