@@ -395,6 +395,9 @@ void StartDefaultTask(void const * argument)
 
 		if (getFlagStructure().finalHSerkannt){ // finales Haltesignal erkannt
 			fsm_state = HALTESIGNAL_ANFAHREN;
+			//Activate Tof for Final Haltesignal detection
+			HAL_GPIO_WritePin(GPIOF, SHDN_TOF_KLOTZ_Pin, GPIO_PIN_RESET);
+			HAL_GPIO_WritePin(GPIOF, SHDN_TOF_TAFEL_Pin, GPIO_PIN_SET);
 		}
 		break;
 
@@ -446,11 +449,7 @@ void StartDefaultTask(void const * argument)
 void StartTask02(void const * argument)
 {
   /* USER CODE BEGIN StartTask02 */
-  //uint8_t txData[3];
-  //char x = 'x';
-  //char y = 'y';
-  //char z = 'z';
-  uint8_t testInt;
+
   /* Infinite loop */
   for(;;)
   {
@@ -460,11 +459,12 @@ void StartTask02(void const * argument)
 		//testInt = getZValue();
 	}*/
 	if(measureDistanceValue()==TASK_OK){
-		//testInt = getDistanceValue();
-		//if(testInt <60){
-		//	__NOP();
-		//}
+
 	}
+	else{
+		//Error Handling ist still ToDo
+	}
+
 
 
 
@@ -499,7 +499,9 @@ void StartTask03(void const * argument)
 	uint8_t firstReverseCount = 0;		//dito
 
 	//Allow H_Bridge to Control the Motors
+#if FunkFernsteuer_BoardcomputerBetrieb
 	HAL_GPIO_WritePin(HB_Sleep_GPIO_Port, HB_Sleep_Pin, GPIO_PIN_SET);
+#endif
 
 
   /* Infinite loop */
