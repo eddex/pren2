@@ -417,10 +417,8 @@ void StartDefaultTask(void const * argument)
 				HAL_GPIO_WritePin(HB_Sleep_GPIO_Port, HB_Sleep_Pin, GPIO_PIN_RESET); // disable H-Bridge
 				while(1);
 			#endif
-			distHaltesignal=getDistanceValue();
-			posHaltesignal=(Quad_GetPos()*Wirkumfang)/(iGetriebe*TicksPerRev); // Umrechnung Ticks in Millimeter
-			posHaltesignal+=distHaltesignal;
-
+			distHaltesignal=(getDistanceValue() * iGetriebe * TicksPerRev) / (Wirkumfang)); // Umrechnung Millimeter in Ticks
+			posHaltesignal=Quad_GetPos()+distHaltesignal; // Speicherung Position Haltesignal
 			fsm_state = HALTESIGNAL_STOPPEN;
 		}
 		else if(taskState==TASK_TIME_OVERFLOW){
@@ -438,10 +436,16 @@ void StartDefaultTask(void const * argument)
 
 	// Positionregelung vor Haltesignal
 	case HALTESIGNAL_STOPPEN:
+		PID_Velo(SlowVelo);
+		if (Quad_GetPos()>=posHaltesignal){
+			Motor_Break();
+			fsm_state = STOP;
+		}
+		/*
 		PID_Pos(posHaltesignal);
 		if (PID_InPos()){
 			fsm_state = STOP;
-		}
+		}*/
 		break;
 
 	// Warten bis Startsignal von Raspi zurückgenommen wird
