@@ -106,6 +106,11 @@ uint8_t storeNextByte = 0;
 //debugVariable
 uint8_t tx_dataUART2[] = {0,0,0,0};		//Transmit Data Buffer for UART2 Debugging
 
+// function before main to initialise
+void __attribute__ ((constructor)) premain()
+{
+	HAL_GPIO_WritePin(HB_Sleep_GPIO_Port, HB_Sleep_Pin, GPIO_PIN_RESET);
+}
 
 //******************************************************************************************
 /* USER CODE END 0 */
