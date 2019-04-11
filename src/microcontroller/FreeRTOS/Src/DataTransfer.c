@@ -52,6 +52,12 @@ void setDistanceValue(uint8_t value){
 	distanceValue = value;
 	taskEXIT_CRITICAL();
 }
+
+void resetDistanceValue(void){
+	taskENTER_CRITICAL();
+	distanceValue = 255;
+	taskEXIT_CRITICAL();
+}
 //************************************************************
 
 

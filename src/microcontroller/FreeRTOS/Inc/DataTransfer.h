@@ -7,7 +7,6 @@
 
 #ifndef DATATRANSFER_H_
 #define DATATRANSFER_H_
-
 #include <stdint.h>
 
 
@@ -17,8 +16,8 @@
 #define UARTSendRaspyData 1							//0 --> Disabled / 1 --> Enabled
 
 //Defines for FSM Debugging
-#define FSMTaskEnable 0								//0 --> Disabled / 1 --> Enabled (Currently not used)
-#define WuerfelerkenneUndLaden_TEST 0				//0 --> Disabled / 1 --> Enabled
+#define FSMTaskEnable 1								//0 --> Disabled / 1 --> Enabled (Currently not used)
+#define WuerfelerkenneUndLaden_TEST 1				//0 --> Disabled / 1 --> Enabled
 //*******************************************************************
 
 
@@ -42,6 +41,7 @@ flags_UartData_t getFlagStructure(void);
 //****************VL6180X**************************************
 uint8_t getDistanceValue(void);
 void setDistanceValue(uint8_t);
+void resetDistanceValue(void);
 //************************************************************
 
 

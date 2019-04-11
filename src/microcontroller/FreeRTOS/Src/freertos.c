@@ -81,7 +81,7 @@
 #define MaxNbrSignals 10 // maximale Anzahl Signale auf der Strecke
 #define MaxNbrRounds 2 // maximale Anzahl Runden
 #define MaxLoadAttempts 4 // maximale Anzahl Würfelladeversuche
-#define MaxTrackLength 15000 // maximale Streckenlänge [mm]
+#define MaxTrackLength 20000 // maximale Streckenlänge [mm]
 
 /* USER CODE END PD */
 
@@ -257,15 +257,15 @@ void StartDefaultTask(void const * argument)
 			//Enable H-Bridge Module of Motor1 and Motor2
 			HAL_GPIO_WritePin(HB_Sleep_GPIO_Port, HB_Sleep_Pin, GPIO_PIN_SET);
 			posStart=Quad_GetPos();
-			fsm_state = WURFEL_ERKENNEN;
 			startTimeMeasurment();											//Zeitmessung beginnen für Abbruchkriterium des Tasks
+			fsm_state = WURFEL_ERKENNEN;
 		}
 
 		#if WuerfelerkenneUndLaden_TEST
 		//Enable H-Bridge Module of Motor1 and Motor2
 		HAL_GPIO_WritePin(HB_Sleep_GPIO_Port, HB_Sleep_Pin, GPIO_PIN_SET);
-		fsm_state = WURFEL_ERKENNEN;
 		startTimeMeasurment();											//Zeitmessung beginnen für Abbruchkriterium des Tasks
+		fsm_state = WURFEL_ERKENNEN;
 		#endif
 		break;
 
@@ -273,7 +273,7 @@ void StartDefaultTask(void const * argument)
 	case WURFEL_ERKENNEN:
 		PID_Velo(SlowVelo); //Mit langsamer Geschwindigkeit fahren
 
-		taskState = wurfel_erkennen(130); //Versuche den Wüfel in einer Distanz bis zu 13cm zu erkennen
+		taskState = tof_erkennen(130); //Versuche den Wüfel in einer Distanz bis zu 13cm zu erkennen
 
 		if(taskState == TASK_OK){
 			fsm_state = SERVO_RUNTER;
@@ -308,9 +308,9 @@ void StartDefaultTask(void const * argument)
 			servoAngle = Servo_GetAngle(); // Winkel auslesen
 			Servo_SetAngle(--servoAngle); // Winkel verkleinern
 			if (servoAngle <= 0){
-				fsm_state = WURFEL_KONTROLLE;
-				startTimeMeasurment();
 				__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 0);		//Entlastet PWM von Servomotor, damit am Anschlag nicht weitergefahren wird.
+				startTimeMeasurment();
+				fsm_state = WURFEL_KONTROLLE;
 			}
 		}
 		break;
@@ -319,7 +319,7 @@ void StartDefaultTask(void const * argument)
 	// Falls er erfolgreich geladen wurde, wird die Startposition angefahren
 	// Falls nicht geladen, werden weitere Ladeversuche gestartet
 	case WURFEL_KONTROLLE:
-		if(wurfel_erkennen(40)==TASK_OK){  // Wenn Objekt in einem Abstand von bis zu 4cm erkannt wurde --> Würfel geladen
+		if(tof_erkennen(40)==TASK_OK){  // Wenn Objekt in einem Abstand von bis zu 4cm erkannt wurde --> Würfel geladen
 			wurfelCtr=0;
 			fsm_state = STARTPOSITION;
 		}
@@ -337,6 +337,8 @@ void StartDefaultTask(void const * argument)
 
 	// Startposition anfahren -> Anlauf holen
 	case STARTPOSITION:
+		HAL_GPIO_WritePin(GPIOF, SHDN_TOF_KLOTZ_Pin, GPIO_PIN_RESET); // Tof Klotz disable
+
 		PID_Velo(-SlowVelo); // Mit langsamer Geschwindigkeit an die ursprüngliche Position zurück fahren
 
 		//Wenn die ursprüngliche Position beim zurückfahren erreicht wurde
@@ -352,9 +354,6 @@ void StartDefaultTask(void const * argument)
 
 	// Schnellfahrt (Beschleunigen und Abbruchkriterien checken)
 	case SCHNELLFAHRT:
-
-		// Momentan wird maximal eine Strecke von 15m gefahren!
-
 		//Geschwindigkeitsrampe bis max.Speed
 		speed+=10;
 		if (speed >= MaxVelo){
@@ -383,7 +382,6 @@ void StartDefaultTask(void const * argument)
 			fsm_state = FINALES_HALTESIGNAL;
 		}
 		PID_Velo(speed);
-
 		break;
 
 	// Warten auf Signal finales Haltesignal erkannt von Raspi
@@ -395,57 +393,52 @@ void StartDefaultTask(void const * argument)
 
 		if (getFlagStructure().finalHSerkannt){ // finales Haltesignal erkannt
 			fsm_state = HALTESIGNAL_ANFAHREN;
-			//Activate Tof for Final Haltesignal detection
-			HAL_GPIO_WritePin(GPIOF, SHDN_TOF_KLOTZ_Pin, GPIO_PIN_RESET);
-			HAL_GPIO_WritePin(GPIOF, SHDN_TOF_TAFEL_Pin, GPIO_PIN_SET);
 		}
 
 		#if WuerfelerkenneUndLaden_TEST
-			HAL_GPIO_WritePin(GPIOF, SHDN_TOF_KLOTZ_Pin, GPIO_PIN_RESET);
-			HAL_GPIO_WritePin(GPIOF, SHDN_TOF_TAFEL_Pin, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOF, SHDN_TOF_TAFEL_Pin, GPIO_PIN_SET); // Tof Tafel enable
+			resetDistanceValue(); // Reset Distance Value for next measurement
 			VL6180X_Init();
-			fsm_state = HALTESIGNAL_ANFAHREN;
 			startTimeMeasurment();
+			fsm_state = HALTESIGNAL_ANFAHREN;
 		#endif
-
-
 		break;
 
 	// Haltesignal mit TOF erkennen
 	case HALTESIGNAL_ANFAHREN:
 		PID_Velo(SlowVelo);
-		taskState=wurfel_erkennen(40);
+		taskState=tof_erkennen(100);
 
 		if(taskState==TASK_OK){
+			HAL_GPIO_WritePin(GPIOF, SHDN_TOF_TAFEL_Pin, GPIO_PIN_RESET); // Tof Tafel disable
 
 			#if WuerfelerkenneUndLaden_TEST
 				Motor_Break();
-				HAL_GPIO_WritePin(HB_Sleep_GPIO_Port, HB_Sleep_Pin, GPIO_PIN_SET);
+				HAL_GPIO_WritePin(HB_Sleep_GPIO_Port, HB_Sleep_Pin, GPIO_PIN_RESET); // disable H-Bridge
 				while(1);
 			#endif
-
-			posHaltesignal=Quad_GetPos();
 			distHaltesignal=getDistanceValue();
+			posHaltesignal=(Quad_GetPos()*Wirkumfang)/(iGetriebe*TicksPerRev); // Umrechnung Ticks in Millimeter
+			posHaltesignal+=distHaltesignal;
+
 			fsm_state = HALTESIGNAL_STOPPEN;
 		}
 		else if(taskState==TASK_TIME_OVERFLOW){
 			//Was machen wir wenn das Haltesignal nicht erkannt wird???
 			#if WuerfelerkenneUndLaden_TEST
 				Motor_Break();
-				HAL_GPIO_WritePin(HB_Sleep_GPIO_Port, HB_Sleep_Pin, GPIO_PIN_SET);
+				HAL_GPIO_WritePin(HB_Sleep_GPIO_Port, HB_Sleep_Pin, GPIO_PIN_RESET);
 				while(1);
 			#endif
 		}
 		else{
 			//Task is Running
 		}
-
-
 		break;
 
 	// Positionregelung vor Haltesignal
 	case HALTESIGNAL_STOPPEN:
-		PID_Pos(posHaltesignal+distHaltesignal);
+		PID_Pos(posHaltesignal);
 		if (PID_InPos()){
 			fsm_state = STOP;
 		}
@@ -504,7 +497,7 @@ void StartTask02(void const * argument)
 
 	//txData[0] = getDistanceValue();
 	//HAL_UART_Transmit(&huart2, txData, 3, 100);
-	osDelay(500);
+	osDelay(50);
 
 	#else
 		  osDelay(9000);

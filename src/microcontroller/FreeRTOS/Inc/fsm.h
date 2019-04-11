@@ -29,8 +29,6 @@ typedef enum {
 }taskState_t;
 
 
-taskState_t wurfel_erkennen(uint8_t distance);
-
-taskState_t haltesignal_erkennen(void);
+taskState_t tof_erkennen(uint8_t distance);
 
 #endif /* FSM_H_ */

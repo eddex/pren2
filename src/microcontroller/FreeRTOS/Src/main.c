@@ -169,9 +169,7 @@ int main(void)
   //If Sensortask enabled
 #if SensorTaskEnable
   //Enable only the Tof for laoding the Wood-Klotz ;-)
-  HAL_GPIO_WritePin(GPIOF, SHDN_TOF_KLOTZ_Pin, GPIO_PIN_RESET);
-  HAL_GPIO_WritePin(GPIOF, SHDN_TOF_TAFEL_Pin, GPIO_PIN_SET);
-  VL6180X_Init();											//Init of VL6180X Distance Sensor Device
+
   HAL_Delay(10);
   HAL_GPIO_WritePin(GPIOF, SHDN_TOF_KLOTZ_Pin, GPIO_PIN_SET);
   HAL_GPIO_WritePin(GPIOF, SHDN_TOF_TAFEL_Pin, GPIO_PIN_RESET);
