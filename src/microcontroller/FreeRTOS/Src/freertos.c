@@ -399,19 +399,48 @@ void StartDefaultTask(void const * argument)
 			HAL_GPIO_WritePin(GPIOF, SHDN_TOF_KLOTZ_Pin, GPIO_PIN_RESET);
 			HAL_GPIO_WritePin(GPIOF, SHDN_TOF_TAFEL_Pin, GPIO_PIN_SET);
 		}
+
+		#if WuerfelerkenneUndLaden_TEST
+			HAL_GPIO_WritePin(GPIOF, SHDN_TOF_KLOTZ_Pin, GPIO_PIN_RESET);
+			HAL_GPIO_WritePin(GPIOF, SHDN_TOF_TAFEL_Pin, GPIO_PIN_SET);
+			VL6180X_Init();
+			fsm_state = HALTESIGNAL_ANFAHREN;
+			startTimeMeasurment();
+		#endif
+
+
 		break;
 
 	// Haltesignal mit TOF erkennen
 	case HALTESIGNAL_ANFAHREN:
 		PID_Velo(SlowVelo);
-		if(haltesignal_erkennen()==TASK_OK){
+		taskState=wurfel_erkennen(40);
+
+		if(taskState==TASK_OK){
+
+			#if WuerfelerkenneUndLaden_TEST
+				Motor_Break();
+				HAL_GPIO_WritePin(HB_Sleep_GPIO_Port, HB_Sleep_Pin, GPIO_PIN_SET);
+				while(1);
+			#endif
+
 			posHaltesignal=Quad_GetPos();
 			distHaltesignal=getDistanceValue();
 			fsm_state = HALTESIGNAL_STOPPEN;
 		}
-		else{
+		else if(taskState==TASK_TIME_OVERFLOW){
 			//Was machen wir wenn das Haltesignal nicht erkannt wird???
+			#if WuerfelerkenneUndLaden_TEST
+				Motor_Break();
+				HAL_GPIO_WritePin(HB_Sleep_GPIO_Port, HB_Sleep_Pin, GPIO_PIN_SET);
+				while(1);
+			#endif
 		}
+		else{
+			//Task is Running
+		}
+
+
 		break;
 
 	// Positionregelung vor Haltesignal
@@ -458,7 +487,8 @@ void StartTask02(void const * argument)
 	/*if(measureAccel3AxisValues()==TASK_OK){
 		//testInt = getZValue();
 	}*/
-	if(measureDistanceValue()==TASK_OK){
+
+	  if(measureDistanceValue()==TASK_OK){
 
 	}
 	else{
@@ -592,19 +622,19 @@ void StartTask04(void const * argument)
   for(;;)
   {
 	#if UARTSendRaspyData
-	  UartSendBuffer[1] = -1;									//TOF 1: Fail, its not possible to read out both Distance Sensors...
+	  UartSendBuffer[1] = 0;									//TOF 1: Fail, its not possible to read out both Distance Sensors...
 	  UartSendBuffer[2] = getDistanceValue();					//TOF 2
 
-	  #if SensorTaskEnable
-	  X_Accel_buffer = getXValue();
+	  #if SensorTaskEnable//!!!!!!!!
+	  //X_Accel_buffer = getXValue();
 	  UartSendBuffer[3] = (uint8_t) (X_Accel_buffer >> 8);		//X_Accel_high
 	  UartSendBuffer[4] = (uint8_t) (X_Accel_buffer & 0xff);	//X_Accel_low
 
-	  Y_Accel_buffer = getYValue();
+	  //Y_Accel_buffer = getYValue();
 	  UartSendBuffer[5] = (uint8_t) (Y_Accel_buffer >> 8);		//Y_Accel_high
 	  UartSendBuffer[6] = (uint8_t) (Y_Accel_buffer & 0xff);	//Y_Accel_low
 
-	  Z_Accel_buffer = getZValue();
+	  //Z_Accel_buffer = getZValue();
 	  UartSendBuffer[7] = (uint8_t) (Z_Accel_buffer >> 8);		//Z_Accel_high
 	  UartSendBuffer[8] = (uint8_t) (Z_Accel_buffer & 0xff);	//Z_Accel_low
 
@@ -618,17 +648,17 @@ void StartTask04(void const * argument)
 	  UartSendBuffer[8] = -1;
 	  #endif
 
-	  UartSendBuffer[9] = -1;		//Servo Data
-	  UartSendBuffer[10] = -1;		//FSM State
+	  UartSendBuffer[9] = Servo_GetAngle();		//Servo Data
+	  UartSendBuffer[10] = 0;		//FSM State
 
 	  HAL_UART_Transmit(&huart1, UartSendBuffer, 11, 1000);
 
 
 	  //*********Virtual Comport UART Debug**************
-	  HAL_UART_Transmit(&huart2, UartSendBuffer, 11, 1000);
+	  //HAL_UART_Transmit(&huart2, UartSendBuffer, 11, 1000);
 	  //*************************************************
 
-	  osDelay(2000);
+	  osDelay(1000);
 
 	  //Implementation to Do
 
