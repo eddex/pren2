@@ -16,21 +16,22 @@ flags_UartData_t flags_UartData;
 
 void setFlagStructure(uint8_t value){
 
-	taskENTER_CRITICAL();
+	//taskENTER_CRITICAL();
 	flags_UartData.startSignal = (value & 0b10000000)>>7;
 	flags_UartData.finalHSerkannt = (value & 0b00000100)>>2;
 	flags_UartData.signalCounter = (value & 0b00000010)>>1;
 	flags_UartData.spareFlag = (value & 0b00000001);
 	flags_UartData.roundCounter = (value & 0b01111000)>>3;
-	taskEXIT_CRITICAL();
+	//taskEXIT_CRITICAL();
 }
 
 flags_UartData_t getFlagStructure(void){
-	flags_UartData_t flags_UartData_Copy;
-	taskENTER_CRITICAL();
-	flags_UartData_Copy = flags_UartData;
-	taskEXIT_CRITICAL();
-	return flags_UartData_Copy;
+	//flags_UartData_t flags_UartData_Copy;
+	//taskENTER_CRITICAL();
+	//flags_UartData_Copy = flags_UartData;
+	//taskEXIT_CRITICAL();
+	//return flags_UartData_Copy;
+	return flags_UartData;
 }
 //************************************************************
 

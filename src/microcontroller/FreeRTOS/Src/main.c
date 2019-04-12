@@ -423,6 +423,15 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 	//If one Byte before was the Sync Character
 	if(storeNextByte == 1){
 		setFlagStructure(rx_dataUART1_Boardcomputer[0]);			//Store the essential Data
+
+		tx_dataUART2[0] = getFlagStructure().startSignal;
+		tx_dataUART2[1] = getFlagStructure().finalHSerkannt;
+		tx_dataUART2[2] = getFlagStructure().roundCounter;
+		tx_dataUART2[3] = getFlagStructure().signalCounter;
+
+		HAL_UART_Transmit(&huart2, tx_dataUART2, 4, 1000);
+
+		//----------------------------------------------
 	}
 
 	if(rx_dataUART1_Boardcomputer[0]==0x7f && storeNextByte == 0){	//Sync-Caracter detected
@@ -434,16 +443,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 
 
 
-	//Debug via UART2 Virtual Comport-------------
-	/*
-	tx_dataUART2[0] = getFlagStructure().startSignal;
-	tx_dataUART2[1] = getFlagStructure().finalHSerkannt;
-	tx_dataUART2[2] = getFlagStructure().roundCounter;
-	tx_dataUART2[3] = getFlagStructure().signalCounter;
 
-	HAL_UART_Transmit(&huart2, tx_dataUART2, 4, 1000);
-	*/
-	//----------------------------------------------
 
 
 

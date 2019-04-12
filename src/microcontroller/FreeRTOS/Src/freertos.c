@@ -81,7 +81,7 @@
 #define MaxNbrSignals 10 // maximale Anzahl Signale auf der Strecke
 #define MaxNbrRounds 2 // maximale Anzahl Runden
 #define MaxLoadAttempts 4 // maximale Anzahl Würfelladeversuche
-#define MaxTrackLength 20000 // maximale Streckenlänge [mm]
+#define MaxTrackLength 100000 // maximale Streckenlänge [mm]
 
 /* USER CODE END PD */
 
@@ -119,7 +119,7 @@ void vApplicationMallocFailedHook(void);
 
 /* USER CODE BEGIN 1 */
 uint32_t TickCounter = 0;
-uint8_t suspendSensorTask = 1; //0: Task is Running   / 1: Task suspended
+uint8_t suspendSensorTask = 1; 		//0: Task is Running   / 1: Task suspended
 /* Functions needed when configGENERATE_RUN_TIME_STATS is on */
 __weak void configureTimerForRunTimeStats(void)
 {
@@ -669,20 +669,20 @@ void StartTask04(void const * argument)
   {
 	#if UARTSendRaspyData
 	  UartSendBuffer[1] = 0;									//TOF 1: Fail, its not possible to read out both Distance Sensors...
-	  UartSendBuffer[2] = getDistanceValue();					//TOF 2
+	  UartSendBuffer[2] = 0;//getDistanceValue();					//TOF 2
 
 	  #if SensorTaskEnable//!!!!!!!!
 	  //X_Accel_buffer = getXValue();
-	  UartSendBuffer[3] = (uint8_t) (X_Accel_buffer >> 8);		//X_Accel_high
-	  UartSendBuffer[4] = (uint8_t) (X_Accel_buffer & 0xff);	//X_Accel_low
+	  UartSendBuffer[3] = 0;//(uint8_t) (X_Accel_buffer >> 8);		//X_Accel_high
+	  UartSendBuffer[4] = 0;//(uint8_t) (X_Accel_buffer & 0xff);	//X_Accel_low
 
 	  //Y_Accel_buffer = getYValue();
-	  UartSendBuffer[5] = (uint8_t) (Y_Accel_buffer >> 8);		//Y_Accel_high
-	  UartSendBuffer[6] = (uint8_t) (Y_Accel_buffer & 0xff);	//Y_Accel_low
+	  UartSendBuffer[5] = 0;//(uint8_t) (Y_Accel_buffer >> 8);		//Y_Accel_high
+	  UartSendBuffer[6] = 0;//(uint8_t) (Y_Accel_buffer & 0xff);	//Y_Accel_low
 
 	  //Z_Accel_buffer = getZValue();
-	  UartSendBuffer[7] = (uint8_t) (Z_Accel_buffer >> 8);		//Z_Accel_high
-	  UartSendBuffer[8] = (uint8_t) (Z_Accel_buffer & 0xff);	//Z_Accel_low
+	  UartSendBuffer[7] = 0;	//(uint8_t) (Z_Accel_buffer >> 8);		//Z_Accel_high
+	  UartSendBuffer[8] = 0;	//(uint8_t) (Z_Accel_buffer & 0xff);	//Z_Accel_low
 
 
 	  #else
@@ -694,7 +694,7 @@ void StartTask04(void const * argument)
 	  UartSendBuffer[8] = -1;
 	  #endif
 
-	  UartSendBuffer[9] = Servo_GetAngle();		//Servo Data
+	  UartSendBuffer[9] = 0;//Servo_GetAngle();		//Servo Data
 	  UartSendBuffer[10] = 0;		//FSM State
 
 	  HAL_UART_Transmit(&huart1, UartSendBuffer, 11, 1000);
@@ -704,7 +704,7 @@ void StartTask04(void const * argument)
 	  //HAL_UART_Transmit(&huart2, UartSendBuffer, 11, 1000);
 	  //*************************************************
 
-	  osDelay(1000);
+	  osDelay(500);
 
 	  //Implementation to Do
 
