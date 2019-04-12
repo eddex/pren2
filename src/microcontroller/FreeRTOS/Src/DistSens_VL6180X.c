@@ -145,13 +145,15 @@ taskState_t VL6180X_Init(void){
 
 taskState_t measureDistanceValue(void){
 	distTaskState = TASK_OK;
+
 	/*
 	do{
 		dataBuffer[0] = 0;
 		if(HAL_I2C_Mem_Read(&hi2c1, VL6180X_DevAddress,0x004F,2, dataBuffer, 1, 100)==HAL_OK);else{distTaskState = TASK_ERROR;};
 		//dataBuffer[0] = dataBuffer[0] & 0x07; //The 3 lowests bits are relevant
 	}while((dataBuffer[0] & 0x04) != 0x04);
-	*/
+*/
+
 	dataBuffer[0] = 0;
 	if(HAL_I2C_Mem_Read(&hi2c1, VL6180X_DevAddress,0x004F,2, dataBuffer, 1, 100)==HAL_OK);else{distTaskState = TASK_ERROR;};
 

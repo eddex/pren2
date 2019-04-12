@@ -107,10 +107,11 @@ uint8_t storeNextByte = 0;
 uint8_t tx_dataUART2[] = {0,0,0,0};		//Transmit Data Buffer for UART2 Debugging
 
 // function before main to initialise
+/*
 void __attribute__ ((constructor)) premain()
 {
 	HAL_GPIO_WritePin(HB_Sleep_GPIO_Port, HB_Sleep_Pin, GPIO_PIN_RESET);
-}
+}*/
 
 //******************************************************************************************
 /* USER CODE END 0 */
@@ -170,10 +171,11 @@ int main(void)
 #if SensorTaskEnable
   //Enable only the Tof for laoding the Wood-Klotz ;-)
 
-  HAL_Delay(10);
-  HAL_GPIO_WritePin(GPIOF, SHDN_TOF_KLOTZ_Pin, GPIO_PIN_SET);
-  HAL_GPIO_WritePin(GPIOF, SHDN_TOF_TAFEL_Pin, GPIO_PIN_RESET);
-  VL6180X_Init();											//Init of VL6180X Distance Sensor Device
+  //This Config is now in FSM Startup Task
+  //HAL_Delay(10);
+  //HAL_GPIO_WritePin(GPIOF, SHDN_TOF_KLOTZ_Pin, GPIO_PIN_SET);
+  //HAL_GPIO_WritePin(GPIOF, SHDN_TOF_TAFEL_Pin, GPIO_PIN_RESET);
+  //VL6180X_Init();											//Init of VL6180X Distance Sensor Device
 
   MMA8451_Init();											//Init of MMA8451 Accel Sensor Device
 #endif
@@ -433,12 +435,14 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 
 
 	//Debug via UART2 Virtual Comport-------------
+	/*
 	tx_dataUART2[0] = getFlagStructure().startSignal;
 	tx_dataUART2[1] = getFlagStructure().finalHSerkannt;
 	tx_dataUART2[2] = getFlagStructure().roundCounter;
 	tx_dataUART2[3] = getFlagStructure().signalCounter;
 
 	HAL_UART_Transmit(&huart2, tx_dataUART2, 4, 1000);
+	*/
 	//----------------------------------------------
 
 

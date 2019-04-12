@@ -119,6 +119,7 @@ void vApplicationMallocFailedHook(void);
 
 /* USER CODE BEGIN 1 */
 uint32_t TickCounter = 0;
+uint8_t suspendSensorTask = 1; //0: Task is Running   / 1: Task suspended
 /* Functions needed when configGENERATE_RUN_TIME_STATS is on */
 __weak void configureTimerForRunTimeStats(void)
 {
@@ -242,6 +243,8 @@ void StartDefaultTask(void const * argument)
   uint8_t servoAngle = 0; // Winkelmerker Servo
   uint16_t speed = 0; // Geschwindigkeit der Motoren
 
+  uint8_t tryAgain = 0; 	//Würfel konnte nach 3 mal nicht geladen werden--> Das ganze noch mal Versuchen
+
   /* Infinite loop */
   for(;;)
   {
@@ -254,6 +257,13 @@ void StartDefaultTask(void const * argument)
 	case STARTUP:
 		//getStartSignal is available with the function_call "flags_UartData_t getFlagStructure(void)" see for more info in usart.h
 		if (getFlagStructure().startSignal){
+			HAL_GPIO_WritePin(GPIOF, SHDN_TOF_KLOTZ_Pin, GPIO_PIN_SET); // Tof Klotz enable
+			HAL_GPIO_WritePin(GPIOF, SHDN_TOF_TAFEL_Pin, GPIO_PIN_RESET); // Tof Tafel disable
+			resetDistanceValue(); // Reset Distance Value for next measurement
+			VL6180X_Init();
+			suspendSensorTask=0; //Enable Sensor Task
+			startTimeMeasurment();
+
 			//Enable H-Bridge Module of Motor1 and Motor2
 			HAL_GPIO_WritePin(HB_Sleep_GPIO_Port, HB_Sleep_Pin, GPIO_PIN_SET);
 			posStart=Quad_GetPos();
@@ -262,6 +272,13 @@ void StartDefaultTask(void const * argument)
 		}
 
 		#if WuerfelerkenneUndLaden_TEST
+		HAL_GPIO_WritePin(GPIOF, SHDN_TOF_KLOTZ_Pin, GPIO_PIN_SET); // Tof Klotz enable
+		HAL_GPIO_WritePin(GPIOF, SHDN_TOF_TAFEL_Pin, GPIO_PIN_RESET); // Tof Tafel disable
+		resetDistanceValue(); // Reset Distance Value for next measurement
+		VL6180X_Init();
+		suspendSensorTask=0; //Enable Sensor Task
+		startTimeMeasurment();
+
 		//Enable H-Bridge Module of Motor1 and Motor2
 		HAL_GPIO_WritePin(HB_Sleep_GPIO_Port, HB_Sleep_Pin, GPIO_PIN_SET);
 		startTimeMeasurment();											//Zeitmessung beginnen für Abbruchkriterium des Tasks
@@ -319,13 +336,15 @@ void StartDefaultTask(void const * argument)
 	// Falls er erfolgreich geladen wurde, wird die Startposition angefahren
 	// Falls nicht geladen, werden weitere Ladeversuche gestartet
 	case WURFEL_KONTROLLE:
-		if(tof_erkennen(40)==TASK_OK){  // Wenn Objekt in einem Abstand von bis zu 4cm erkannt wurde --> Würfel geladen
+		taskState=tof_erkennen(40);
+		if(taskState==TASK_OK){  // Wenn Objekt in einem Abstand von bis zu 4cm erkannt wurde --> Würfel geladen
 			wurfelCtr=0;
 			fsm_state = STARTPOSITION;
 		}
 		else{
 			wurfelCtr++;
 			if (wurfelCtr >= MaxLoadAttempts){ // maximale Anzahl Versuche erreicht
+				wurfelCtr=0;
 				fsm_state = STARTPOSITION;
 			}
 			else{
@@ -337,15 +356,27 @@ void StartDefaultTask(void const * argument)
 
 	// Startposition anfahren -> Anlauf holen
 	case STARTPOSITION:
-		HAL_GPIO_WritePin(GPIOF, SHDN_TOF_KLOTZ_Pin, GPIO_PIN_RESET); // Tof Klotz disable
+
 
 		PID_Velo(-SlowVelo); // Mit langsamer Geschwindigkeit an die ursprüngliche Position zurück fahren
 
 		//Wenn die ursprüngliche Position beim zurückfahren erreicht wurde
-		if (Quad_GetPos()<posStart){
+		if ((Quad_GetPos()<posStart && taskState==TASK_OK)||(Quad_GetPos()<posStart && tryAgain ==1)){	//Konnte der Wüfel nach max. 3 Versuchen geladen werden?
 			Motor_Break();
+			suspendSensorTask=1; //Task suspended
+			osDelay(10);
+			HAL_GPIO_WritePin(GPIOF, SHDN_TOF_KLOTZ_Pin, GPIO_PIN_RESET); // Tof Klotz disable
 			fsm_state = SCHNELLFAHRT;
 		}
+		else if((Quad_GetPos()<posStart && tryAgain==0)){	//Würfel konnte nach 3 Versuchen nicht geladen werden
+			//Versuche noch einmal den Würfel zu erkennen
+			tryAgain = 1;
+			Motor_Break();
+			startTimeMeasurment();
+			fsm_state = WURFEL_ERKENNEN;
+		}
+
+
 
 		/*if (PID_InPos()){
 			fsm_state = SCHNELLFAHRT;
@@ -392,15 +423,24 @@ void StartDefaultTask(void const * argument)
 		//ToDo
 
 		if (getFlagStructure().finalHSerkannt){ // finales Haltesignal erkannt
+			HAL_GPIO_WritePin(GPIOF, SHDN_TOF_TAFEL_Pin, GPIO_PIN_SET); // Tof Tafel enable
+			resetDistanceValue(); // Reset Distance Value for next measurement
+			VL6180X_Init();
+			suspendSensorTask=0; //Enable Sensor Task
+			startTimeMeasurment();
 			fsm_state = HALTESIGNAL_ANFAHREN;
+			PID_ClearError();
+
 		}
 
 		#if WuerfelerkenneUndLaden_TEST
 			HAL_GPIO_WritePin(GPIOF, SHDN_TOF_TAFEL_Pin, GPIO_PIN_SET); // Tof Tafel enable
 			resetDistanceValue(); // Reset Distance Value for next measurement
 			VL6180X_Init();
+			suspendSensorTask=0; //Enable Sensor Task
 			startTimeMeasurment();
 			fsm_state = HALTESIGNAL_ANFAHREN;
+			PID_ClearError();
 		#endif
 		break;
 
@@ -412,12 +452,14 @@ void StartDefaultTask(void const * argument)
 		if(taskState==TASK_OK){
 			HAL_GPIO_WritePin(GPIOF, SHDN_TOF_TAFEL_Pin, GPIO_PIN_RESET); // Tof Tafel disable
 
+			/*
 			#if WuerfelerkenneUndLaden_TEST
 				Motor_Break();
 				HAL_GPIO_WritePin(HB_Sleep_GPIO_Port, HB_Sleep_Pin, GPIO_PIN_RESET); // disable H-Bridge
 				while(1);
-			#endif
-			distHaltesignal=(getDistanceValue() * iGetriebe * TicksPerRev) / (Wirkumfang)); // Umrechnung Millimeter in Ticks
+			#endif*/
+
+			distHaltesignal=((getDistanceValue() * iGetriebe * TicksPerRev) / (Wirkumfang)); // Umrechnung Millimeter in Ticks
 			posHaltesignal=Quad_GetPos()+distHaltesignal; // Speicherung Position Haltesignal
 			fsm_state = HALTESIGNAL_STOPPEN;
 		}
@@ -450,9 +492,11 @@ void StartDefaultTask(void const * argument)
 
 	// Warten bis Startsignal von Raspi zurückgenommen wird
 	case STOP:
+		/*
 		if (!(getFlagStructure().startSignal)){	//!getStartSignal() Was meinst du mit dem Andi?
 			fsm_state = STARTUP;
-		}
+		}*/
+
 		break;
 	}
     osDelay(10);
@@ -485,14 +529,19 @@ void StartTask02(void const * argument)
 		//testInt = getZValue();
 	}*/
 
-	  if(measureDistanceValue()==TASK_OK){
 
-	}
-	else{
+	  if(suspendSensorTask==0){
+		  if(measureDistanceValue()==TASK_OK){}
+		  osDelay(200);
+	  }
+
+	  else{
 		//Error Handling ist still ToDo
-	}
+		  osDelay(200);
+	  }
 
-
+	  //if(measureDistanceValue()==TASK_OK){}
+	  //osDelay(500);
 
 
 	//txData[0] = (uint8_t) z;
@@ -501,7 +550,7 @@ void StartTask02(void const * argument)
 
 	//txData[0] = getDistanceValue();
 	//HAL_UART_Transmit(&huart2, txData, 3, 100);
-	osDelay(50);
+
 
 	#else
 		  osDelay(9000);
