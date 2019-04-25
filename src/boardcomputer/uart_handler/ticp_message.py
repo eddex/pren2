@@ -1,3 +1,4 @@
+import logging
 import sys
 
 from uart_handler.ticp_common import TICPCommand, TICPMessageType
@@ -51,12 +52,18 @@ class TICPMessagePrototype(object):
                 Args:
                     payload: The bytes[] array you want to attach to the
                 """
-        if len(payload) == self.payload_size:
-            self._payload = payload
+        if payload is None:
+            self._payload = b''
         else:
-            raise ValueError("Passed payload size (" + str(len(payload)) +
+            if len(payload) == self.payload_size:
+                self._payload = payload
+            else:
+                raise ValueError("Passed payload size (" + str(len(payload)) +
                              ") does not match with expected size (" +
                              str(self.payload_size) + ")")
+
+    def handle_message(self):
+        raise NotImplemented
 
 
 class TICPMessageAllCommandData(TICPMessagePrototype):
@@ -111,8 +118,14 @@ class TICPMessageAllCommandData(TICPMessagePrototype):
         payload_int = int.from_bytes(self._payload, byteorder=sys.byteorder, signed=False)
         return (payload_int & 0x78) >> 3
 
+    def handle_message(self):
+        print(self.payload)
+        logging.info(self.__str__())
 
-
+    def __str__(self):
+        string = "Start: " + str(self.start_signal) + " | Stop: " + str(self.stop_signal) + \
+                 " | Round: " + str(self.round_counter)
+        return string
 
 
 class TICPMessageAllSensorData(TICPMessagePrototype):
@@ -130,6 +143,13 @@ class TICPMessageAllSensorData(TICPMessagePrototype):
         super(TICPMessageAllSensorData, self).__init__(TICPMessageType.RES_ALL_SENSOR_DATA_MSG,
                                                        payload
                                                        )
+
+    def __str__(self):
+        string = "Speed: " + str(self.speed) + " TOF (1/2): " + str(self.tof1) + "|" + \
+                 str(self.tof2) + " Accel (x/y): " + str(self.accel_x) + "|" + \
+                 str(self.accel_y) + " Servo: " + str(self.servo) + " FSM: " + str(self.fsm_state)
+
+        return string
 
     @classmethod
     def from_sensor_values(cls, tof1_data: int,
@@ -192,6 +212,10 @@ class TICPMessageAllSensorData(TICPMessagePrototype):
     @property
     def fsm_state(self) -> int:
         return _TICPMessageDecoder.convert_from_byte_to_fsm(self._payload[9:10])
+
+    def handle_message(self):
+        logging.info(self.__str__())
+        print(self.__str__())
 
 
 class _TICPMessageDecoder:

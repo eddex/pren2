@@ -1,0 +1,57 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font: 13px Helvetica, Arial;
+    background: #313335
+}
+
+form {
+    background: #000;
+    padding: 3px;
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+}
+
+form input {
+    border: 0;
+    padding: 10px;
+    width: 90%;
+    margin-right: .5%;
+}
+
+form button {
+    font: 16px Helvetica, Arial;
+    width: 9%;
+    background: rgb(175, 177, 179);
+    border: none;
+    padding: 10px;
+}
+
+#messages {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+}
+
+#messages li {
+    padding: 5px 10px;
+    background: #2b2b2b;
+    color: #8bb2c1
+}
+
+/* #messages li:nth-child(odd) { background: #313335; color: #8bb2c1}
+*/
+nav ul {
+    height: 300px;
+    width: 100%;
+}
+
+nav ul {
+    overflow: hidden;
+    overflow-y: scroll;
+}

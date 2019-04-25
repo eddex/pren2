@@ -63,7 +63,7 @@ class TICPCommand(Enum):
         Returns:
              8bit unsigned number representing the Opcoode
         """
-        return self._opcode
+        return self._opcode[0:1]
 
 
 class TICPMessageType(Enum):

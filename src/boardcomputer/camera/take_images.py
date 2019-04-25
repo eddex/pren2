@@ -1,37 +1,65 @@
-import datetime
+import base64
 import io
+import threading
 import time
+from time import sleep
 
 import picamera
-from PIL import Image
+import socketio
+
+sio = socketio.Client()
+sio.connect('http://localhost:5000')
 
 with picamera.PiCamera() as camera:
     # Set the camera's resolution to VGA @40fps and give it a couple
     # of seconds to measure exposure etc.
-    # camera.rotation = 180
+    # camera.rotation = 180handler.write_message(msg)
 
     #
-    camera.resolution = (1280, 960)
-    camera.brightness = 55
-    camera.exposure_mode = 'off'
-    camera.shutter_speed = 10000
-    camera.framerate = 2
-    time.sleep(4)
+    camera.resolution = (960, 640)
+    camera.brightness = 50
+    camera.shutter_speed = 100000
+    camera.exposure_mode = "off"
+    camera.framerate = 8
+    camera.rotation = 0
+    time.sleep(1)
 
     # Set up 40 in-memory streams
-    outputs = [io.BytesIO() for i in range(30)]
-    print(datetime.datetime.now())
-    start = time.time()
-    camera.capture_sequence(outputs, 'jpeg', use_video_port=True)
-    finish = time.time()
-    print(datetime.datetime.now())
-    # How fast were we?
-    print('Captured 10 images at %.2ffps' % (40 / (finish - start)))
-
     i = 0
-    for output in outputs:
-        i = i + 1
-        img = Image.open(output, mode='r')
 
-        img.save(("/home/pi/pren/src/boardcomputer/camera/img/img" + str(i) + ".jpg"),
-                 format='jpeg')
+    stream = io.BytesIO()
+    for picture in camera.capture_continuous(stream, format='jpeg', use_video_port=True):
+        print("Picture")
+        stream.truncate()
+        stream.seek(0)
+
+        data_uri = base64.b64encode(stream.read()).decode('ASCII')
+        stream.seek(0)
+
+        sio.emit('pictureSet', str(data_uri))
+        sleep(0.02)
+
+        break
+
+sio.disconnect()
+
+
+class imageToWebserverThread:
+
+    def __init__(self, buffer: io.BytesIO):
+
+        self.buffer = buffer
+
+        self._stopped = False
+
+        self.thread1 = threading.Thread(target=self.read_thread)
+        self.thread1.start()
+
+    def thread(self):
+        while not self._stopped:
+            if self.buffer.readable():
+                pass
+
+    def stop(self):
+        self._stopped = True
+        self.thread1.join()

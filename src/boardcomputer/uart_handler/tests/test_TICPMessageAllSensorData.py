@@ -76,3 +76,4 @@ class TestTICPMessageAllSensorData(TestCase):
                                                           servo1_data=60,
                                                           fsm_state=70)
         self.assertEqual(70, msg.fsm_state)
+
