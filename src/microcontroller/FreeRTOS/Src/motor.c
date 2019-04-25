@@ -28,15 +28,15 @@ void Motor_SetVelo(int8_t velo){
 		pwm_value = (velo * PWM_MAX_VALUE)/100;
 		__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
 		__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, pwm_value);
-		__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_3, 0);
-		__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, pwm_value);
+		__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_3, pwm_value);
+		__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, 0);
 	} else{
 		// IN1 = 0 & IN2 = PWM 	--> Reverse
 		pwm_value = (-velo * PWM_MAX_VALUE)/100;
 		__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwm_value);
 		__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, 0);
-		__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_3, pwm_value);
-		__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, 0);
+		__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_3, 0);
+		__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, pwm_value);
 	}
 }
 

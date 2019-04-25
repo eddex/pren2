@@ -81,7 +81,7 @@
 #define MaxNbrSignals 10 // maximale Anzahl Signale auf der Strecke
 #define MaxNbrRounds 2 // maximale Anzahl Runden
 #define MaxLoadAttempts 4 // maximale Anzahl Würfelladeversuche
-#define MaxTrackLength 100000 // maximale Streckenlänge [mm]
+#define MaxTrackLength 20000 // maximale Streckenlänge [mm]
 
 /* USER CODE END PD */
 
@@ -267,7 +267,7 @@ void StartDefaultTask(void const * argument)
 			//Enable H-Bridge Module of Motor1 and Motor2
 			HAL_GPIO_WritePin(HB_Sleep_GPIO_Port, HB_Sleep_Pin, GPIO_PIN_SET);
 			posStart=Quad_GetPos();
-			startTimeMeasurment();											//Zeitmessung beginnen für Abbruchkriterium des Tasks
+			startTimeMeasurment();			//Zeitmessung beginnen für Abbruchkriterium des Tasks
 			fsm_state = WURFEL_ERKENNEN;
 		}
 
@@ -281,7 +281,7 @@ void StartDefaultTask(void const * argument)
 
 		//Enable H-Bridge Module of Motor1 and Motor2
 		HAL_GPIO_WritePin(HB_Sleep_GPIO_Port, HB_Sleep_Pin, GPIO_PIN_SET);
-		startTimeMeasurment();											//Zeitmessung beginnen für Abbruchkriterium des Tasks
+		startTimeMeasurment();					//Zeitmessung beginnen für Abbruchkriterium des Tasks
 		fsm_state = WURFEL_ERKENNEN;
 		#endif
 		break;
