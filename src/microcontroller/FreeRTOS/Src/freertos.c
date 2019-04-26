@@ -83,6 +83,9 @@
 #define MaxLoadAttempts 4 // maximale Anzahl Würfelladeversuche
 #define MaxTrackLength 20000 // maximale Streckenlänge [mm]
 
+//fsm State wurde von Default Task hierher verschoben, damit im sendDataToRaspy Task darauf zugegriffen werden kann
+enum fsm fsm_state; // create enum for statemachine task
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -226,7 +229,7 @@ void StartDefaultTask(void const * argument)
 {
 
   /* USER CODE BEGIN StartDefaultTask */
-  enum fsm fsm_state; // create enum for statemachine task
+
   fsm_state = STARTUP; // Default State -> Startup
 
   taskState_t taskState;
@@ -664,54 +667,77 @@ void StartTask04(void const * argument)
   uint16_t X_Accel_buffer=0;
   uint16_t Y_Accel_buffer=0;
   uint16_t Z_Accel_buffer=0;
+  uint8_t changeSendByte=0;
 
   for(;;)
   {
-	#if UARTSendRaspyData
-	  UartSendBuffer[1] = 0;									//TOF 1: Fail, its not possible to read out both Distance Sensors...
-	  UartSendBuffer[2] = 0;//getDistanceValue();					//TOF 2
+#if UARTSendRaspyData
+	  switch(changeSendByte){
 
-	  #if SensorTaskEnable//!!!!!!!!
-	  //X_Accel_buffer = getXValue();
-	  UartSendBuffer[3] = 0;//(uint8_t) (X_Accel_buffer >> 8);		//X_Accel_high
-	  UartSendBuffer[4] = 0;//(uint8_t) (X_Accel_buffer & 0xff);	//X_Accel_low
+	  	  case 0:	UartSendBuffer[changeSendByte] = 0x21;	//Opcode
+	  	  	  	  	changeSendByte++;
+		  break;
+	  	  case 1:	UartSendBuffer[changeSendByte] = 0;		//TOF 1: Fail, its not possible to read out both Distance Sensors...
+	  	  	  	  	changeSendByte++;
+		  break;
+	  	  case 2:	UartSendBuffer[changeSendByte] = getDistanceValue();	//Actual TOF
+	  	  	  	  	changeSendByte++;
+		  break;
+	  	  case 3:	X_Accel_buffer = getXValue();
+	  		  	  	UartSendBuffer[changeSendByte] = (uint8_t) (X_Accel_buffer >> 8);		//X_Accel_high
+	  	  	  	  	changeSendByte++;
+		  break;
+	  	  case 4:	UartSendBuffer[changeSendByte] = (uint8_t) (X_Accel_buffer & 0xff);		//X_Accel_low
+	  	  	  	  	changeSendByte++;
+		  break;
+	  	  case 5:	Y_Accel_buffer = getYValue();
+	  		  	  	UartSendBuffer[changeSendByte] = (uint8_t) (Y_Accel_buffer >> 8);		//Y_Accel_high
+	  	  	  	  	changeSendByte++;
+		  break;
+	  	  case 6:	UartSendBuffer[changeSendByte] = (uint8_t) (Y_Accel_buffer & 0xff);		//Y_Accel_low
+	  	  	  	  	changeSendByte++;
+		  break;
+	  	  //Acc. to Interface Spec. UART should case 7 be Speed High Data
+	  	  case 7:	Z_Accel_buffer = getZValue();
+	  		  	  	UartSendBuffer[changeSendByte] = (uint8_t) (Z_Accel_buffer >> 8);		//Z_Accel_high
+	  	  	  	  	changeSendByte++;
+		  break;
+		  //Acc. to Interface Spec. UART should case 7 be Speed Low Data
+	  	  case 8:	UartSendBuffer[changeSendByte] = (uint8_t) (Z_Accel_buffer & 0xff);		//Z_Accel_low
+	  	  	  	  	changeSendByte++;
+		  break;
+	  	  case 9:	UartSendBuffer[changeSendByte] = Servo_GetAngle();		//Actual Servo Angle
+	  	  	  	  	changeSendByte++;
+		  break;
+	  	  case 10:	UartSendBuffer[changeSendByte] = fsm_state;				//Actual FSM State
+	  	  	  	  	changeSendByte=0;
+		  break;
 
-	  //Y_Accel_buffer = getYValue();
-	  UartSendBuffer[5] = 0;//(uint8_t) (Y_Accel_buffer >> 8);		//Y_Accel_high
-	  UartSendBuffer[6] = 0;//(uint8_t) (Y_Accel_buffer & 0xff);	//Y_Accel_low
+		#if !SensorTaskEnable
+			UartSendBuffer[3] = 0;
+			UartSendBuffer[4] = 0;
+			UartSendBuffer[5] = 0;
+			UartSendBuffer[6] = 0;
+			UartSendBuffer[7] = 0;
+			UartSendBuffer[8] = 0;
+		#endif
 
-	  //Z_Accel_buffer = getZValue();
-	  UartSendBuffer[7] = 0;	//(uint8_t) (Z_Accel_buffer >> 8);		//Z_Accel_high
-	  UartSendBuffer[8] = 0;	//(uint8_t) (Z_Accel_buffer & 0xff);	//Z_Accel_low
+		HAL_UART_Transmit(&huart1, UartSendBuffer, 1, 1000);
 
-
-	  #else
-	  UartSendBuffer[3] = -1;
-	  UartSendBuffer[4] = -1;
-	  UartSendBuffer[5] = -1;
-	  UartSendBuffer[6] = -1;
-	  UartSendBuffer[7] = -1;
-	  UartSendBuffer[8] = -1;
-	  #endif
-
-	  UartSendBuffer[9] = 0;//Servo_GetAngle();		//Servo Data
-	  UartSendBuffer[10] = 0;		//FSM State
-
-	  HAL_UART_Transmit(&huart1, UartSendBuffer, 11, 1000);
+		//*********Virtual Comport UART Debug**************
+		HAL_UART_Transmit(&huart2, UartSendBuffer, 1, 1000);
+		//*************************************************
+		osDelay(100);
+	  }
 
 
-	  //*********Virtual Comport UART Debug**************
-	  //HAL_UART_Transmit(&huart2, UartSendBuffer, 11, 1000);
-	  //*************************************************
-
-	  osDelay(500);
-
-	  //Implementation to Do
-
-	#else
+#else
 	osDelay(9000);
 
-	#endif
+#endif
+
+
+
 
   }
   /* USER CODE END StartTask04 */
