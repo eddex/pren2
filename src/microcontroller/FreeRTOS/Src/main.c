@@ -177,7 +177,12 @@ int main(void)
   //HAL_GPIO_WritePin(GPIOF, SHDN_TOF_TAFEL_Pin, GPIO_PIN_RESET);
   //VL6180X_Init();											//Init of VL6180X Distance Sensor Device
 
-  MMA8451_Init();											//Init of MMA8451 Accel Sensor Device
+  if(MMA8451_Init()==TASK_OK){											//Init of MMA8451 Accel Sensor Device
+	  HAL_GPIO_WritePin(LED_Heartbeat_GPIO_Port, LED_Heartbeat_Pin, GPIO_PIN_RESET);
+  }
+  else{
+	  HAL_GPIO_WritePin(LED_Heartbeat_GPIO_Port, LED_Heartbeat_Pin, GPIO_PIN_SET);
+  }
 #endif
 
   /*

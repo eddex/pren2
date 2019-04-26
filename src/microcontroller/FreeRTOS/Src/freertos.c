@@ -99,7 +99,8 @@ enum fsm fsm_state; // create enum for statemachine task
 osThreadId fsm_tskHandle;
 osThreadId tof_tskHandle;
 osThreadId radio_tskHandle;
-osThreadId ServoTaskHandle;
+osThreadId uart_tskHandle;
+osThreadId acc_tskHandle;
 osSemaphoreId myBinarySem01Handle;
 
 /* Private function prototypes -----------------------------------------------*/
@@ -110,7 +111,8 @@ osSemaphoreId myBinarySem01Handle;
 void FSM_Task(void const * argument);
 void TOF_Task(void const * argument);
 void Radio_Task(void const * argument);
-void StartTask04(void const * argument);
+void UART_Task(void const * argument);
+void Accel_Task(void const * argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -205,9 +207,13 @@ void MX_FREERTOS_Init(void) {
   osThreadDef(radio_tsk, Radio_Task, osPriorityNormal, 0, 128);
   radio_tskHandle = osThreadCreate(osThread(radio_tsk), NULL);
 
-  /* definition and creation of ServoTask */
-  osThreadDef(ServoTask, StartTask04, osPriorityNormal, 0, 128);
-  ServoTaskHandle = osThreadCreate(osThread(ServoTask), NULL);
+  /* definition and creation of uart_tsk */
+  osThreadDef(uart_tsk, UART_Task, osPriorityNormal, 0, 128);
+  uart_tskHandle = osThreadCreate(osThread(uart_tsk), NULL);
+
+  /* definition and creation of acc_tsk */
+  osThreadDef(acc_tsk, Accel_Task, osPriorityNormal, 0, 128);
+  acc_tskHandle = osThreadCreate(osThread(acc_tsk), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -502,7 +508,7 @@ void FSM_Task(void const * argument)
 
 			break;
 		}
-	    osDelay(10);
+		osDelay(10);
 
 	#else
 	  osDelay(9000);
@@ -527,12 +533,6 @@ void TOF_Task(void const * argument)
 	for(;;)
 	{
 		#if SensorTaskEnable
-
-		if(measureAccel3AxisValues()==TASK_OK){
-			//testInt = getZValue();
-		}
-
-
 		if(suspendSensorTask==0){
 			if(measureDistanceValue()==TASK_OK){}
 			osDelay(200);
@@ -542,9 +542,8 @@ void TOF_Task(void const * argument)
 			//Error Handling ist still ToDo
 			osDelay(200);
 		}
-
 		#else
-			  osDelay(9000);
+			osDelay(9000);
 		#endif
 	}
   /* USER CODE END TOF_Task */
@@ -620,80 +619,87 @@ void Radio_Task(void const * argument)
 
 		}
 		osDelay(10);
-	}
 		#else
 	  	osDelay(9000);
-	}
 		#endif
+	}
   /* USER CODE END Radio_Task */
 }
 
-/* USER CODE BEGIN Header_StartTask04 */
+/* USER CODE BEGIN Header_UART_Task */
 /**
-* @brief Function implementing the ServoTask thread.
+* @brief Function implementing the uart_tsk thread.
 * @param argument: Not used
 * @retval None
 */
-/* USER CODE END Header_StartTask04 */
-void StartTask04(void const * argument)
+/* USER CODE END Header_UART_Task */
+void UART_Task(void const * argument)
 {
-  /* USER CODE BEGIN StartTask04 */
-  /* Infinite loop */
+  /* USER CODE BEGIN UART_Task */
+	/* Infinite loop */
 
-  uint8_t UartSendBuffer[1];
-  UartSendBuffer[0] = 0x21;	//Opcode of UART Spec: Respond all Sensor Data
+	uint8_t UartSendBuffer[1];
+	UartSendBuffer[0] = 0x21;	//Opcode of UART Spec: Respond all Sensor Data
 
-  uint16_t X_Accel_buffer=0;
-  uint16_t Y_Accel_buffer=0;
-  uint16_t Z_Accel_buffer=0;
-  uint8_t changeSendByte=0;
+	uint16_t X_Accel_buffer=0;
+	uint16_t Y_Accel_buffer=0;
+	uint16_t Z_Accel_buffer=0;
+	uint8_t changeSendByte=0;
 
-  for(;;)
-  {
-#if UARTSendRaspyData
-	  switch(changeSendByte){
-
-	  	  case 0:	UartSendBuffer[0] = 0x21;	//Opcode
-	  	  	  	  	changeSendByte++;
-		  break;
-	  	  case 1:	UartSendBuffer[0] = 0;		//TOF 1: Fail, its not possible to read out both Distance Sensors...
-	  	  	  	  	changeSendByte++;
-		  break;
-	  	  case 2:	UartSendBuffer[0] = getDistanceValue();	//Actual TOF
-	  	  	  	  	changeSendByte++;
-		  break;
-	  	  case 3:	X_Accel_buffer = getXValue();
-	  		  	  	UartSendBuffer[0] = (uint8_t) (X_Accel_buffer >> 8);		//X_Accel_high
-	  	  	  	  	changeSendByte++;
-		  break;
-	  	  case 4:	UartSendBuffer[0] = (uint8_t) (X_Accel_buffer & 0xff);		//X_Accel_low
-	  	  	  	  	changeSendByte++;
-		  break;
-	  	  case 5:	Y_Accel_buffer = getYValue();
-	  		  	  	UartSendBuffer[0] = (uint8_t) (Y_Accel_buffer >> 8);		//Y_Accel_high
-	  	  	  	  	changeSendByte++;
-		  break;
-	  	  case 6:	UartSendBuffer[0] = (uint8_t) (Y_Accel_buffer & 0xff);		//Y_Accel_low
-	  	  	  	  	changeSendByte++;
-		  break;
-	  	  //Acc. to Interface Spec. UART should case 7 be Speed High Data
-	  	  case 7:	Z_Accel_buffer = getZValue();
-	  		  	  	UartSendBuffer[0] = (uint8_t) (Z_Accel_buffer >> 8);		//Z_Accel_high
-	  	  	  	  	changeSendByte++;
-		  break;
-		  //Acc. to Interface Spec. UART should case 7 be Speed Low Data
-	  	  case 8:	UartSendBuffer[0] = (uint8_t) (Z_Accel_buffer & 0xff);		//Z_Accel_low
-	  	  	  	  	changeSendByte++;
-		  break;
-	  	  case 9:	UartSendBuffer[0] = Servo_GetAngle();		//Actual Servo Angle
-	  	  	  	  	changeSendByte++;
-		  break;
-	  	  case 10:	UartSendBuffer[0] = fsm_state;				//Actual FSM State
-	  	  	  	  	changeSendByte=0;
-		  break;
-
-
-	  }
+	for(;;)
+	{
+		#if UARTSendRaspyData
+		switch(changeSendByte){
+			case 0:
+				UartSendBuffer[0] = 0x21;	//Opcode
+				changeSendByte++;
+				break;
+			case 1:
+				UartSendBuffer[0] = 0;		//TOF 1: Fail, its not possible to read out both Distance Sensors...
+				changeSendByte++;
+				break;
+			case 2:
+				UartSendBuffer[0] = getDistanceValue();	//Actual TOF
+				changeSendByte++;
+				break;
+			case 3:
+				X_Accel_buffer = getXValue();
+				UartSendBuffer[0] = (uint8_t) (X_Accel_buffer >> 8);		//X_Accel_high
+				changeSendByte++;
+				break;
+			case 4:
+				UartSendBuffer[0] = (uint8_t) (X_Accel_buffer & 0xff);		//X_Accel_low
+				changeSendByte++;
+				break;
+			case 5:
+				Y_Accel_buffer = getYValue();
+				UartSendBuffer[0] = (uint8_t) (Y_Accel_buffer >> 8);		//Y_Accel_high
+				changeSendByte++;
+				break;
+			case 6:
+				UartSendBuffer[0] = (uint8_t) (Y_Accel_buffer & 0xff);		//Y_Accel_low
+				changeSendByte++;
+				break;
+			//Acc. to Interface Spec. UART should case 7 be Speed High Data
+			case 7:
+				Z_Accel_buffer = getZValue();
+				UartSendBuffer[0] = (uint8_t) (Z_Accel_buffer >> 8);		//Z_Accel_high
+				changeSendByte++;
+				break;
+			//Acc. to Interface Spec. UART should case 7 be Speed Low Data
+			case 8:
+				UartSendBuffer[0] = (uint8_t) (Z_Accel_buffer & 0xff);		//Z_Accel_low
+				changeSendByte++;
+				break;
+			case 9:
+				UartSendBuffer[0] = Servo_GetAngle();		//Actual Servo Angle
+				changeSendByte++;
+				break;
+			case 10:
+				UartSendBuffer[0] = fsm_state;				//Actual FSM State
+				changeSendByte=0;
+				break;
+		}
 		#if !SensorTaskEnable
 			UartSendBuffer[3] = 0;
 			UartSendBuffer[4] = 0;
@@ -709,18 +715,32 @@ void StartTask04(void const * argument)
 		HAL_UART_Transmit(&huart2, UartSendBuffer, 1, 1000);
 		//*************************************************
 		osDelay(200);
+		#else
+		osDelay(9000);
+		#endif
+	}
+  /* USER CODE END UART_Task */
+}
 
-
-#else
-	osDelay(9000);
-
-#endif
-
-
-
-
+/* USER CODE BEGIN Header_Accel_Task */
+/**
+* @brief Function implementing the acc_tsk thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_Accel_Task */
+void Accel_Task(void const * argument)
+{
+  /* USER CODE BEGIN Accel_Task */
+	/* Infinite loop */
+	for(;;)
+	{
+		if(measureAccel3AxisValues()==TASK_OK){
+			//testInt = getZValue();
+		}
+		osDelay(10);
   }
-  /* USER CODE END StartTask04 */
+  /* USER CODE END Accel_Task */
 }
 
 /* Private application code --------------------------------------------------*/
