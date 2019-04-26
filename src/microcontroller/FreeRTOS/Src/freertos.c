@@ -640,7 +640,7 @@ void StartTask04(void const * argument)
   /* USER CODE BEGIN StartTask04 */
   /* Infinite loop */
 
-  uint8_t UartSendBuffer[11];
+  uint8_t UartSendBuffer[1];
   UartSendBuffer[0] = 0x21;	//Opcode of UART Spec: Respond all Sensor Data
 
   uint16_t X_Accel_buffer=0;
@@ -653,45 +653,47 @@ void StartTask04(void const * argument)
 #if UARTSendRaspyData
 	  switch(changeSendByte){
 
-	  	  case 0:	UartSendBuffer[changeSendByte] = 0x21;	//Opcode
+	  	  case 0:	UartSendBuffer[0] = 0x21;	//Opcode
 	  	  	  	  	changeSendByte++;
 		  break;
-	  	  case 1:	UartSendBuffer[changeSendByte] = 0;		//TOF 1: Fail, its not possible to read out both Distance Sensors...
+	  	  case 1:	UartSendBuffer[0] = 0;		//TOF 1: Fail, its not possible to read out both Distance Sensors...
 	  	  	  	  	changeSendByte++;
 		  break;
-	  	  case 2:	UartSendBuffer[changeSendByte] = getDistanceValue();	//Actual TOF
+	  	  case 2:	UartSendBuffer[0] = getDistanceValue();	//Actual TOF
 	  	  	  	  	changeSendByte++;
 		  break;
 	  	  case 3:	X_Accel_buffer = getXValue();
-	  		  	  	UartSendBuffer[changeSendByte] = (uint8_t) (X_Accel_buffer >> 8);		//X_Accel_high
+	  		  	  	UartSendBuffer[0] = (uint8_t) (X_Accel_buffer >> 8);		//X_Accel_high
 	  	  	  	  	changeSendByte++;
 		  break;
-	  	  case 4:	UartSendBuffer[changeSendByte] = (uint8_t) (X_Accel_buffer & 0xff);		//X_Accel_low
+	  	  case 4:	UartSendBuffer[0] = (uint8_t) (X_Accel_buffer & 0xff);		//X_Accel_low
 	  	  	  	  	changeSendByte++;
 		  break;
 	  	  case 5:	Y_Accel_buffer = getYValue();
-	  		  	  	UartSendBuffer[changeSendByte] = (uint8_t) (Y_Accel_buffer >> 8);		//Y_Accel_high
+	  		  	  	UartSendBuffer[0] = (uint8_t) (Y_Accel_buffer >> 8);		//Y_Accel_high
 	  	  	  	  	changeSendByte++;
 		  break;
-	  	  case 6:	UartSendBuffer[changeSendByte] = (uint8_t) (Y_Accel_buffer & 0xff);		//Y_Accel_low
+	  	  case 6:	UartSendBuffer[0] = (uint8_t) (Y_Accel_buffer & 0xff);		//Y_Accel_low
 	  	  	  	  	changeSendByte++;
 		  break;
 	  	  //Acc. to Interface Spec. UART should case 7 be Speed High Data
 	  	  case 7:	Z_Accel_buffer = getZValue();
-	  		  	  	UartSendBuffer[changeSendByte] = (uint8_t) (Z_Accel_buffer >> 8);		//Z_Accel_high
+	  		  	  	UartSendBuffer[0] = (uint8_t) (Z_Accel_buffer >> 8);		//Z_Accel_high
 	  	  	  	  	changeSendByte++;
 		  break;
 		  //Acc. to Interface Spec. UART should case 7 be Speed Low Data
-	  	  case 8:	UartSendBuffer[changeSendByte] = (uint8_t) (Z_Accel_buffer & 0xff);		//Z_Accel_low
+	  	  case 8:	UartSendBuffer[0] = (uint8_t) (Z_Accel_buffer & 0xff);		//Z_Accel_low
 	  	  	  	  	changeSendByte++;
 		  break;
-	  	  case 9:	UartSendBuffer[changeSendByte] = Servo_GetAngle();		//Actual Servo Angle
+	  	  case 9:	UartSendBuffer[0] = Servo_GetAngle();		//Actual Servo Angle
 	  	  	  	  	changeSendByte++;
 		  break;
-	  	  case 10:	UartSendBuffer[changeSendByte] = fsm_state;				//Actual FSM State
+	  	  case 10:	UartSendBuffer[0] = fsm_state;				//Actual FSM State
 	  	  	  	  	changeSendByte=0;
 		  break;
 
+
+	  }
 		#if !SensorTaskEnable
 			UartSendBuffer[3] = 0;
 			UartSendBuffer[4] = 0;
@@ -706,8 +708,7 @@ void StartTask04(void const * argument)
 		//*********Virtual Comport UART Debug**************
 		HAL_UART_Transmit(&huart2, UartSendBuffer, 1, 1000);
 		//*************************************************
-		osDelay(100);
-	  }
+		osDelay(200);
 
 
 #else
