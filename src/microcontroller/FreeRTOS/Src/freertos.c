@@ -525,9 +525,9 @@ void StartTask02(void const * argument)
   {
 	#if SensorTaskEnable
 
-	/*if(measureAccel3AxisValues()==TASK_OK){
+	  if(measureAccel3AxisValues()==TASK_OK){
 		//testInt = getZValue();
-	}*/
+	  }
 
 
 	  if(suspendSensorTask==0){
@@ -539,18 +539,6 @@ void StartTask02(void const * argument)
 		//Error Handling ist still ToDo
 		  osDelay(200);
 	  }
-
-	  //if(measureDistanceValue()==TASK_OK){}
-	  //osDelay(500);
-
-
-	//txData[0] = (uint8_t) z;
-	//txData[1] = (uint8_t) (getZValue() >> 8);
-	//txData[2] = (uint8_t) (getZValue() & 0xff);
-
-	//txData[0] = getDistanceValue();
-	//HAL_UART_Transmit(&huart2, txData, 3, 100);
-
 
 	#else
 		  osDelay(9000);
