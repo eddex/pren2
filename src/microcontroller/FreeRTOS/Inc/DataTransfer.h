@@ -13,7 +13,7 @@
 //****************Debug Defines**************************************
 #define FunkFernsteuer_BoardcomputerBetrieb 0		//0 --> Boardcomputer / 1 --> Funkfernsteuerung
 #define SensorTaskEnable 1							//0 --> Disabled / 1 --> Enabled
-#define UARTSendRaspyData 0							//0 --> Disabled / 1 --> Enabled
+#define UARTSendRaspyData 1							//0 --> Disabled / 1 --> Enabled
 
 //Defines for FSM Debugging
 #define FSMTaskEnable 1								//0 --> Disabled / 1 --> Enabled (Currently not used)

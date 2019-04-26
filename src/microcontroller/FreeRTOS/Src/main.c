@@ -441,16 +441,6 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 		storeNextByte = 0;
 	}
 
-
-
-
-
-
-
-
-
-
-
 #endif
 }
 /* USER CODE END 4 */
