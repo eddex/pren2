@@ -15,13 +15,13 @@
 */
 
 #define tim2Freq 24000000.0 // Timer 2 Frequenz [Hz]
-#define tim2Period (1/tim2Freq)*1000000.0 // Timer 2 Periode [us]
+#define tim2Period (1000000.0/tim2Freq)// Timer 2 Periode [us]
 #define period_0 1100 // Periode für 0° [us]
 #define period_90 1900 // Periode für 90° [us]
 #define pwmValue_0 (period_0/tim2Period) // PWM value for 0°
 #define pwmValue_90 (period_90/tim2Period) // PWM value for 90°
 
-uint16_t servoPWM = 0;
+uint32_t servoPWM = 0;
 uint8_t oldAngle = 0;
 
 // Init method
@@ -36,7 +36,7 @@ void Servo_SetAngle(uint8_t angle){
 	}
 	oldAngle = angle;
 	servoPWM = (((pwmValue_90-pwmValue_0)*angle)/90)+pwmValue_0;
-	__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, servoPWM);
+	__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, (uint16_t) servoPWM);
 }
 
 // Getter method for servo angle 0..90°

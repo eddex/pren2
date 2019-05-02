@@ -63,6 +63,7 @@
 #include "quad.h"
 #include "motor.h"
 #include "pid.h"
+#include "servo.h"
 #include "DataTransfer.h"
 #include "SEGGER/SEGGER_SYSVIEW.h"
 
@@ -72,7 +73,6 @@
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-#define FunkFernsteuer_BoardcomputerBetrieb 1			//0 --> Boardcomputer / 1 --> Funkfernsteuerung
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -86,9 +86,8 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart);
 
 /* USER CODE BEGIN 0 */
 
-
 //*************TIMER variable declaration******************************************
-#define Timer3MaxCounterPeriod 20000	//Variable mit der Timerperiode für die Berechnung des PWMs --> CubeMX Value
+//#define Timer3MaxCounterPeriod 500	//Variable mit der Timerperiode für die Berechnung des PWMs --> CubeMX Value
 uint8_t tim15Count10ms = 0;				//Variable die im TIM15 overflow incrementiert wird und für eine 10ms Zeitbasis verwendet wird
 
 //*************UART variable declaration******************************************
@@ -101,9 +100,19 @@ uint16_t pwmValue = 0;				//(not used) Finally used pwmValue for the pwm generat
 //Receive DAta from Boardcomputer
 uint8_t rx_dataUART1_Boardcomputer[]={0,0};
 uint8_t storeFlagValue = 0;
+uint8_t storeNextByte = 0;
+
 
 //debugVariable
-uint8_t tx_dataUART2[] = {0};		//Transmit Data Buffer for UART2 Debugging
+uint8_t tx_dataUART2[] = {0,0,0,0};		//Transmit Data Buffer for UART2 Debugging
+
+// function before main to initialise
+/*
+void __attribute__ ((constructor)) premain()
+{
+	HAL_GPIO_WritePin(HB_Sleep_GPIO_Port, HB_Sleep_Pin, GPIO_PIN_RESET);
+}*/
+
 //******************************************************************************************
 /* USER CODE END 0 */
 
@@ -115,6 +124,7 @@ uint8_t tx_dataUART2[] = {0};		//Transmit Data Buffer for UART2 Debugging
 int main(void)
 {
   /* USER CODE BEGIN 1 */
+	HAL_GPIO_WritePin(HB_Sleep_GPIO_Port, HB_Sleep_Pin, GPIO_PIN_RESET);
   /* USER CODE END 1 */
 
   /* MCU Configuration----------------------------------------------------------*/
@@ -155,15 +165,25 @@ int main(void)
   Velo_Init();
   PID_Init();
   Motor_Init();
-
-  //Configuration of TaskEnable
-  setEnableSensorTask(0);										//Enable = 1 / Disable= 0 -> SensorTask
+  Servo_Init();
 
   //If Sensortask enabled
-  if(getEnableSensorTask() == 1){
-	  VL6180X_Init();											//Init of VL6180X Distance Sensor Device
-	  //MMA8451_Init();											//Init of MMA8451 Accel Sensor Device
+#if SensorTaskEnable
+  //Enable only the Tof for laoding the Wood-Klotz ;-)
+
+  //This Config is now in FSM Startup Task
+  //HAL_Delay(10);
+  //HAL_GPIO_WritePin(GPIOF, SHDN_TOF_KLOTZ_Pin, GPIO_PIN_SET);
+  //HAL_GPIO_WritePin(GPIOF, SHDN_TOF_TAFEL_Pin, GPIO_PIN_RESET);
+  //VL6180X_Init();											//Init of VL6180X Distance Sensor Device
+
+  if(MMA8451_Init()==TASK_OK){											//Init of MMA8451 Accel Sensor Device
+	  HAL_GPIO_WritePin(LED_Heartbeat_GPIO_Port, LED_Heartbeat_Pin, GPIO_PIN_RESET);
   }
+  else{
+	  HAL_GPIO_WritePin(LED_Heartbeat_GPIO_Port, LED_Heartbeat_Pin, GPIO_PIN_SET);
+  }
+#endif
 
   /*
    * *****************UART1 Configuration*************************
@@ -208,7 +228,7 @@ int main(void)
   HAL_TIM_PWM_Start_IT(&htim2, TIM_CHANNEL_2);
 
   //Channel Compare Value --> PWM Dutycycle
-  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 36000);				//Servomotor Default Position 0°
+  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 26400);				//Servomotor Default Position 0°
   //****************************************************************
 
 
@@ -238,14 +258,14 @@ int main(void)
   HAL_TIM_Base_Start_IT(&htim3);
 
   //CHannel Enable
-  //HAL_TIM_PWM_Start_IT(&htim3, TIM_CHANNEL_1);
-  //HAL_TIM_PWM_Start_IT(&htim3, TIM_CHANNEL_2);
+  HAL_TIM_PWM_Start_IT(&htim3, TIM_CHANNEL_1);
+  HAL_TIM_PWM_Start_IT(&htim3, TIM_CHANNEL_2);
   HAL_TIM_PWM_Start_IT(&htim3, TIM_CHANNEL_3);
   HAL_TIM_PWM_Start_IT(&htim3, TIM_CHANNEL_4);
 
   //Channel Compare Value --> PWM Dutycycle
-  //__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
-  //__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, 0);
+  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
+  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, 0);
   __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_3, 0);
   __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, 0);
   //****************************************************************
@@ -258,9 +278,6 @@ int main(void)
   HAL_TIM_Base_Start_IT(&htim15);
   //********************************************************************
 
-
-  //Enable H-Bridge Module of Motor1 and Motor2
-  HAL_GPIO_WritePin(HB_Sleep_GPIO_Port, HB_Sleep_Pin, GPIO_PIN_SET);
   SEGGER_SYSVIEW_Conf(); // Start SystemViewer
 
   /* USER CODE END 2 */
@@ -376,22 +393,22 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 		setfinalVelocity(100);
 	}
 	else if (receivedSpeedValue == 2){
-		setfinalVelocity(150);
-	}
-	else if (receivedSpeedValue == 3){
-		setfinalVelocity(200);
-	}
-	else if (receivedSpeedValue == 4){
 		setfinalVelocity(300);
 	}
-	else if (receivedSpeedValue == 5){
-		setfinalVelocity(400);
-	}
-	else if (receivedSpeedValue == 6){
+	else if (receivedSpeedValue == 3){
 		setfinalVelocity(500);
 	}
+	else if (receivedSpeedValue == 4){
+		setfinalVelocity(1000);
+	}
+	else if (receivedSpeedValue == 5){
+		setfinalVelocity(1500);
+	}
+	else if (receivedSpeedValue == 6){
+		setfinalVelocity(2000);
+	}
 	else{
-		setfinalVelocity(700);
+		setfinalVelocity(3000);
 	}
 
 
@@ -405,11 +422,29 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 	//HAL_UART_Transmit(&huart2, tx_data, 1, 1000);
 
 #else
-	HAL_UART_Receive_IT(&huart1, rx_dataUART1_Boardcomputer, 2);		//Restart Interrupt reception mode
-	if(rx_dataUART1_Boardcomputer[0] == 0x7F){							//SYNC-Zeichen -->0111'1111
-		setFlagStructure(rx_dataUART1_Boardcomputer[1]);				//Save Received UART Data in Structure
+	//Real Code
+	HAL_UART_Receive_IT(&huart1, rx_dataUART1_Boardcomputer, 1);	//Restart Interrupt reception mode
+
+	//If one Byte before was the Sync Character
+	if(storeNextByte == 1){
+		setFlagStructure(rx_dataUART1_Boardcomputer[0]);			//Store the essential Data
+
+		tx_dataUART2[0] = getFlagStructure().startSignal;
+		tx_dataUART2[1] = getFlagStructure().finalHSerkannt;
+		tx_dataUART2[2] = getFlagStructure().roundCounter;
+		tx_dataUART2[3] = getFlagStructure().signalCounter;
+
+		HAL_UART_Transmit(&huart2, tx_dataUART2, 4, 1000);
+
+		//----------------------------------------------
 	}
 
+	if(rx_dataUART1_Boardcomputer[0]==0x7f && storeNextByte == 0){	//Sync-Caracter detected
+		storeNextByte = 1;
+	}
+	else{
+		storeNextByte = 0;
+	}
 
 #endif
 }

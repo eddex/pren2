@@ -7,17 +7,28 @@
 
 #ifndef DATATRANSFER_H_
 #define DATATRANSFER_H_
-
 #include <stdint.h>
 
 
-//****************UART**************************************
+//****************Debug Defines**************************************
+#define FunkFernsteuer_BoardcomputerBetrieb 0		//0 --> Boardcomputer / 1 --> Funkfernsteuerung
+#define SensorTaskEnable 1							//0 --> Disabled / 1 --> Enabled
+#define UARTSendRaspyData 1							//0 --> Disabled / 1 --> Enabled
+
+//Defines for FSM Debugging
+#define FSMTaskEnable 1								//0 --> Disabled / 1 --> Enabled (Currently not used)
+#define WuerfelerkenneUndLaden_TEST 1				//0 --> Disabled / 1 --> Enabled
+//*******************************************************************
+
+
+
+//****************UART*****************************************
 
 typedef struct{
 unsigned int startSignal 	: 1;
-unsigned int RundenCounter 	: 4;
-unsigned int FinalHSerkannt : 1;
-unsigned int singalCounter	: 1;
+unsigned int roundCounter 	: 4;
+unsigned int finalHSerkannt : 1;
+unsigned int signalCounter	: 1;
 unsigned int spareFlag		: 1;
 } flags_UartData_t;
 
@@ -30,6 +41,7 @@ flags_UartData_t getFlagStructure(void);
 //****************VL6180X**************************************
 uint8_t getDistanceValue(void);
 void setDistanceValue(uint8_t);
+void resetDistanceValue(void);
 //************************************************************
 
 
@@ -43,8 +55,6 @@ int16_t getXValue(void);
 int16_t getYValue(void);
 int16_t getZValue(void);
 
-void setEnableSensorTask(uint8_t);
-uint8_t getEnableSensorTask(void);
 //************************************************************
 
 

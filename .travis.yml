@@ -1,6 +1,7 @@
 language: python
 python:
   - "3.6"
+  - "3.5"
 # navigate to the project folder
 before_install: cd src/boardcomputer
 # command to install dependencies

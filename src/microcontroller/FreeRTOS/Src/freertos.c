@@ -77,16 +77,15 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define SlowVelo 100 // langsame Geschwindigkeit [mm/s]
-#define DistTofToWurfel 100 // Distanz zwischen Tof und Würfel
-#define WurfelLength 50 // Würfellänge
-#define MaxVelo 2000 // maximale Geschwindigkeit [mm/s]
+#define MaxVelo 3000 // maximale Geschwindigkeit [mm/s]
 #define MaxNbrSignals 10 // maximale Anzahl Signale auf der Strecke
 #define MaxNbrRounds 2 // maximale Anzahl Runden
 #define MaxLoadAttempts 4 // maximale Anzahl Würfelladeversuche
-#define MaxTrackLength 15000 // maximale Streckenlänge [mm]
+#define MaxTrackLength 20000 // maximale Streckenlänge [mm]
 
+//fsm State wurde von Default Task hierher verschoben, damit im sendDataToRaspy Task darauf zugegriffen werden kann
+enum fsm fsm_state; // create enum for statemachine task
 
-#define WuerfelerkenneUndLaden_TEST 0
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -97,10 +96,11 @@
 /* USER CODE BEGIN Variables */
 
 /* USER CODE END Variables */
-osThreadId defaultTaskHandle;
-osThreadId SensorTaskHandle;
-osThreadId UartRadioTaskHandle;
-osThreadId ServoTaskHandle;
+osThreadId fsm_tskHandle;
+osThreadId tof_tskHandle;
+osThreadId radio_tskHandle;
+osThreadId uart_tskHandle;
+osThreadId acc_tskHandle;
 osSemaphoreId myBinarySem01Handle;
 
 /* Private function prototypes -----------------------------------------------*/
@@ -108,10 +108,11 @@ osSemaphoreId myBinarySem01Handle;
    
 /* USER CODE END FunctionPrototypes */
 
-void StartDefaultTask(void const * argument);
-void StartTask02(void const * argument);
-void StartTask03(void const * argument);
-void StartTask04(void const * argument);
+void FSM_Task(void const * argument);
+void TOF_Task(void const * argument);
+void Radio_Task(void const * argument);
+void UART_Task(void const * argument);
+void Accel_Task(void const * argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -123,6 +124,7 @@ void vApplicationMallocFailedHook(void);
 
 /* USER CODE BEGIN 1 */
 uint32_t TickCounter = 0;
+uint8_t suspendSensorTask = 1; 		//0: Task is Running   / 1: Task suspended
 /* Functions needed when configGENERATE_RUN_TIME_STATS is on */
 __weak void configureTimerForRunTimeStats(void)
 {
@@ -193,21 +195,25 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE END RTOS_TIMERS */
 
   /* Create the thread(s) */
-  /* definition and creation of defaultTask */
-  osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 128);
-  defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
+  /* definition and creation of fsm_tsk */
+  osThreadDef(fsm_tsk, FSM_Task, osPriorityNormal, 0, 128);
+  fsm_tskHandle = osThreadCreate(osThread(fsm_tsk), NULL);
 
-  /* definition and creation of SensorTask */
-  osThreadDef(SensorTask, StartTask02, osPriorityNormal, 0, 128);
-  SensorTaskHandle = osThreadCreate(osThread(SensorTask), NULL);
+  /* definition and creation of tof_tsk */
+  osThreadDef(tof_tsk, TOF_Task, osPriorityNormal, 0, 128);
+  tof_tskHandle = osThreadCreate(osThread(tof_tsk), NULL);
 
-  /* definition and creation of UartRadioTask */
-  osThreadDef(UartRadioTask, StartTask03, osPriorityNormal, 0, 128);
-  UartRadioTaskHandle = osThreadCreate(osThread(UartRadioTask), NULL);
+  /* definition and creation of radio_tsk */
+  osThreadDef(radio_tsk, Radio_Task, osPriorityNormal, 0, 128);
+  radio_tskHandle = osThreadCreate(osThread(radio_tsk), NULL);
 
-  /* definition and creation of ServoTask */
-  osThreadDef(ServoTask, StartTask04, osPriorityNormal, 0, 128);
-  ServoTaskHandle = osThreadCreate(osThread(ServoTask), NULL);
+  /* definition and creation of uart_tsk */
+  osThreadDef(uart_tsk, UART_Task, osPriorityNormal, 0, 128);
+  uart_tskHandle = osThreadCreate(osThread(uart_tsk), NULL);
+
+  /* definition and creation of acc_tsk */
+  osThreadDef(acc_tsk, Accel_Task, osPriorityNormal, 0, 128);
+  acc_tskHandle = osThreadCreate(osThread(acc_tsk), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -218,407 +224,523 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE END RTOS_QUEUES */
 }
 
-/* USER CODE BEGIN Header_StartDefaultTask */
+/* USER CODE BEGIN Header_FSM_Task */
 /**
-  * @brief  Function implementing the defaultTask thread.
+  * @brief  Function implementing the fsm_tsk thread.
   * @param  argument: Not used 
   * @retval None
   */
-/* USER CODE END Header_StartDefaultTask */
-void StartDefaultTask(void const * argument)
+/* USER CODE END Header_FSM_Task */
+void FSM_Task(void const * argument)
 {
 
-  /* USER CODE BEGIN StartDefaultTask */
-  enum fsm fsm_state; // create enum for statemachine task
-  fsm_state = STARTUP; // Default State -> Startup
+  /* USER CODE BEGIN FSM_Task */
 
-  taskState_t taskState;
-  taskState = TASK_RUNNING;
+	fsm_state = STARTUP; // Default State -> Startup
 
-  uint8_t wurfelCtr = 0; // Zähler Anzahl Ladeversuche
+	taskState_t taskState;
+	taskState = TASK_RUNNING;
 
-  int32_t posStart = 0;	// Positionsmerker bei Startsignal
-  int32_t posWurfel = 0; // Positionsmerker Würfel erkannt
-  int32_t posHaltesignal = 0; // Positionsmerker Haltesignal erkannt
-  int32_t distHaltesignal = 0; // Distanz zum Haltesignal
+	uint8_t wurfelCtr = 0; // Zähler Anzahl Ladeversuche
 
-  uint32_t servoCtr = 0; // Zähler um Servo langsam zu bewegen
-  uint32_t accCtr = 0; // Zähler um Motoren langsam zu beschleunigen
+	int32_t posStart = 0;	// Positionsmerker bei Startsignal
+	int32_t posHaltesignal = 0; // Positionsmerker Haltesignal erkannt
+	int32_t distHaltesignal = 0; // Distanz zum Haltesignal
 
-  uint8_t servoAngle = 0; // Winkelmerker Servo
-  uint16_t speed = 0; // Geschwindigkeit der Motoren
+	uint32_t servoCtr = 0; // Zähler um Servo langsam zu bewegen
 
-  /* Infinite loop */
-  for(;;)
-  {
+	uint8_t servoAngle = 0; // Winkelmerker Servo
+	uint16_t speed = 0; // Geschwindigkeit der Motoren
 
+	uint8_t tryAgain = 0; 	//Würfel konnte nach 3 mal nicht geladen werden--> Das ganze noch mal Versuchen
 
-	//Statemachine acc. to PREN1 Documentation p.24
-	switch(fsm_state){
-	// Warten auf Startbefehl von Raspi
-	case STARTUP:
-		// TODO implement method getStartSignal in Raspi.c
-		//getStartSignal is available with the function_call "flags_UartData_t getFlagStructure(void)" see for more info in usart.h
-		if (0) /*getStartSignal()*/{
-			posStart=Quad_GetPos();
-			fsm_state = WURFEL_ERKENNEN;
-			startTimeMeasurment();											//Zeitmessung beginnen für Abbruchkriterium des Tasks
-			PID_Velo(100);													//Motoren starten auf tiefster Geschwindigkeitsstufe
-		}
+	/* Infinite loop */
+	for(;;)
+	{
 
-		#if WuerfelerkenneUndLaden_TEST
-			fsm_state = WURFEL_ERKENNEN;
-			startTimeMeasurment();											//Zeitmessung beginnen für Abbruchkriterium des Tasks
-			PID_Velo(100);													//Motoren starten auf tiefster Geschwindigkeitsstufe
-		#endif
+	#if FSMTaskEnable
 
+		//Statemachine acc. to PREN1 Documentation p.24
+		switch(fsm_state){
+		// Warten auf Startbefehl von Raspi
+		case STARTUP:
+			//getStartSignal is available with the function_call "flags_UartData_t getFlagStructure(void)" see for more info in usart.h
+			if (getFlagStructure().startSignal){
+				HAL_GPIO_WritePin(GPIOF, SHDN_TOF_KLOTZ_Pin, GPIO_PIN_SET); // Tof Klotz enable
+				HAL_GPIO_WritePin(GPIOF, SHDN_TOF_TAFEL_Pin, GPIO_PIN_RESET); // Tof Tafel disable
+				resetDistanceValue(); // Reset Distance Value for next measurement
+				VL6180X_Init();
+				suspendSensorTask=0; //Enable Sensor Task
+				startTimeMeasurment();
 
-	break;
-
-	// Warten bis Würfel erkennt wird
-	case WURFEL_ERKENNEN:
-		//Nicht notwendig, da in Funktion wurfel_erkennen() bereits gemacht wird.
-		//PID_Velo(SlowVelo); // mit langsamer Geschwindigkeit fahren
-
-		taskState = wurfel_erkennen();
-
-		if(taskState == TASK_OK){
-			posWurfel = Quad_GetPos();
-			fsm_state = WURFEL_VORFAHREN;
-			HAL_GPIO_WritePin(LED_Heartbeat_GPIO_Port, LED_Heartbeat_Pin, GPIO_PIN_SET);
-		}
-		else if(taskState == TASK_TIME_OVERFLOW){ // Würfel nicht erkannt
-			fsm_state = STARTPOSITION;
-			HAL_GPIO_WritePin(LED_Heartbeat_GPIO_Port, LED_Heartbeat_Pin, GPIO_PIN_SET);
-		}
-		else{}
-
-		break;
-
-	// Vorfahren mit Lademechanismus zum Würfel
-	case WURFEL_VORFAHREN:
-		if(1){
-			PID_Pos(posWurfel+DistTofToWurfel); // An Würfelposition fahren
-		}
-
-
-		// TODO implement method PID_InPos in pid.c
-		if (0) /*PID_InPos()*/{
-			fsm_state = SERVO_RUNTER;
-		}
-		break;
-
-	// Lademechanismus nach unten fahren
-	case SERVO_RUNTER:
-
-		//Evtl. Os_delay() Funktion verwenden damit Würfel nicht mit Lichtgeschwindigkeit aufgelanden wird?
-		servoCtr++;
-		if (servoCtr>=100){
-			servoCtr=0;
-			servoAngle = Servo_GetAngle(); // Winkel auslesen
-			Servo_SetAngle(servoAngle++); // Winkel vergrössern
-			if (servoAngle >= 90){
-				fsm_state = SERVO_RAUF;
+				//Enable H-Bridge Module of Motor1 and Motor2
+				HAL_GPIO_WritePin(HB_Sleep_GPIO_Port, HB_Sleep_Pin, GPIO_PIN_SET);
+				posStart=Quad_GetPos();
+				startTimeMeasurment();			//Zeitmessung beginnen für Abbruchkriterium des Tasks
+				fsm_state = WURFEL_ERKENNEN;
 			}
-		}
-		break;
 
-	// Lademechanismus nach oben fahren
-	case SERVO_RAUF:
-		servoCtr++;
-		if (servoCtr>=100){
-			servoCtr=0;
-			servoAngle = Servo_GetAngle(); // Winkel auslesen
-			Servo_SetAngle(servoAngle--); // Winkel verkleinern
-			if (servoAngle <= 0){
-				fsm_state = WURFEL_ZURUCKFAHREN;
+			#if WuerfelerkenneUndLaden_TEST
+			HAL_GPIO_WritePin(GPIOF, SHDN_TOF_KLOTZ_Pin, GPIO_PIN_SET); // Tof Klotz enable
+			HAL_GPIO_WritePin(GPIOF, SHDN_TOF_TAFEL_Pin, GPIO_PIN_RESET); // Tof Tafel disable
+			resetDistanceValue(); // Reset Distance Value for next measurement
+			VL6180X_Init();
+			suspendSensorTask=0; //Enable Sensor Task
+			startTimeMeasurment();
+
+			//Enable H-Bridge Module of Motor1 and Motor2
+			HAL_GPIO_WritePin(HB_Sleep_GPIO_Port, HB_Sleep_Pin, GPIO_PIN_SET);
+			startTimeMeasurment();					//Zeitmessung beginnen für Abbruchkriterium des Tasks
+			fsm_state = WURFEL_ERKENNEN;
+			#endif
+			break;
+
+		// Warten bis Würfel erkennt wird
+		case WURFEL_ERKENNEN:
+			PID_Velo(SlowVelo); //Mit langsamer Geschwindigkeit fahren
+
+			taskState = tof_erkennen(130); //Versuche den Wüfel in einer Distanz bis zu 13cm zu erkennen
+
+			if(taskState == TASK_OK){
+				fsm_state = SERVO_RUNTER;
 			}
-		}
-		break;
+			else if(taskState == TASK_TIME_OVERFLOW){ // Würfel nicht erkannt
+				fsm_state = STARTPOSITION;
+			}
+			else{}
 
-	// Würfelsensor zur Erkennposition zurückfahren -> Kontrolle Würfel geladen
-	case WURFEL_ZURUCKFAHREN:
-		PID_Pos(posWurfel-DistTofToWurfel); // Zurückfahren zur Würfelerkennposition
+			break;
 
-		if(wurfel_erkennen()==TASK_OK){
-			wurfelCtr++;
-			if (wurfelCtr >= MaxLoadAttempts){ // maximale Anzahl Versuche erreicht
+		// Lademechanismus nach unten fahren
+		// Der Winkel wird alle 50ms um 1° erhöht.
+		case SERVO_RUNTER:
+			servoCtr++;
+			if (servoCtr>=5){
+				servoCtr=0;
+				servoAngle = Servo_GetAngle(); 	// Winkel auslesen
+				Servo_SetAngle(++servoAngle); 	// Winkel vergrössern
+				if (servoAngle >= 90){
+					fsm_state = SERVO_RAUF;
+				}
+			}
+			break;
+
+		// Lademechanismus nach oben fahren
+		// Der Winkel wird alle 50ms um 1° verringert.
+		case SERVO_RAUF:
+			servoCtr++;
+			if (servoCtr>=5){
+				servoCtr=0;
+				servoAngle = Servo_GetAngle(); // Winkel auslesen
+				Servo_SetAngle(--servoAngle); // Winkel verkleinern
+				if (servoAngle <= 0){
+					__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 0);		//Entlastet PWM von Servomotor, damit am Anschlag nicht weitergefahren wird.
+					startTimeMeasurment();
+					fsm_state = WURFEL_KONTROLLE;
+				}
+			}
+			break;
+
+		// Kontrolle Würfel geladen
+		// Falls er erfolgreich geladen wurde, wird die Startposition angefahren
+		// Falls nicht geladen, werden weitere Ladeversuche gestartet
+		case WURFEL_KONTROLLE:
+			taskState=tof_erkennen(40);
+			if(taskState==TASK_OK){  // Wenn Objekt in einem Abstand von bis zu 4cm erkannt wurde --> Würfel geladen
 				wurfelCtr=0;
 				fsm_state = STARTPOSITION;
 			}
 			else{
-				posWurfel = Quad_GetPos()-WurfelLength;
-				fsm_state = WURFEL_VORFAHREN;
+				wurfelCtr++;
+				if (wurfelCtr >= MaxLoadAttempts){ // maximale Anzahl Versuche erreicht
+					wurfelCtr=0;
+					fsm_state = STARTPOSITION;
+				}
+				else{
+					//Versuche erneut den Würfel zu greifen
+					fsm_state = SERVO_RUNTER;
+				}
 			}
-		}
-		else{ // TimeOut -> Würfel ist aufgeladen
-			wurfelCtr=0;
-			fsm_state = STARTPOSITION;
-		}
-		break;
+			break;
 
-	// Startposition anfahren -> Anlauf holen
-	case STARTPOSITION:
-		PID_Pos(posStart); // Startposition anfahren
+		// Startposition anfahren -> Anlauf holen
+		case STARTPOSITION:
 
-		// TODO implement method PID_InPos in pid.c
-		if (0) /*PID_InPos()*/{
-			fsm_state = SCHNELLFAHRT;
-		}
-		break;
 
-	// Schnellfahrt (Beschleunigen und Abbruchkriterien checken)
-	case SCHNELLFAHRT:
-		accCtr++;
-		if (accCtr>=100){
-			speed++;
+			PID_Velo(-SlowVelo); // Mit langsamer Geschwindigkeit an die ursprüngliche Position zurück fahren
+
+			//Wenn die ursprüngliche Position beim zurückfahren erreicht wurde
+			if ((Quad_GetPos()<posStart && taskState==TASK_OK)||(Quad_GetPos()<posStart && tryAgain ==1)){	//Konnte der Wüfel nach max. 3 Versuchen geladen werden?
+				Motor_Break();
+				suspendSensorTask=1; //Task suspended
+				osDelay(10);
+				HAL_GPIO_WritePin(GPIOF, SHDN_TOF_KLOTZ_Pin, GPIO_PIN_RESET); // Tof Klotz disable
+				fsm_state = SCHNELLFAHRT;
+			}
+			else if((Quad_GetPos()<posStart && tryAgain==0)){	//Würfel konnte nach 3 Versuchen nicht geladen werden
+				//Versuche noch einmal den Würfel zu erkennen
+				tryAgain = 1;
+				Motor_Break();
+				startTimeMeasurment();
+				fsm_state = WURFEL_ERKENNEN;
+			}
+
+
+
+			/*if (PID_InPos()){
+				fsm_state = SCHNELLFAHRT;
+			}*/
+			break;
+
+		// Schnellfahrt (Beschleunigen und Abbruchkriterien checken)
+		case SCHNELLFAHRT:
+			//Geschwindigkeitsrampe bis max.Speed
+			speed+=10;
 			if (speed >= MaxVelo){
 				speed = MaxVelo;
 			}
 			PID_Velo(speed);
-		}
 
-		// Anzahl Runden erreicht
-		// TODO implement method getNbrRounds in Raspi.c
-		if (0) /*(getNbrRounds >= MaxNbrRounds)*/{
-			accCtr = 0;
-			fsm_state = BREMSEN;
-		}
-		 // Zu viele Signale erkannt
-		// TODO implement method getNbrSignals in Raspi.c
-		else if (0) /*(getNbrSignals() >= MaxNbrSignals)*/{
-			accCtr = 0;
-			fsm_state = BREMSEN;
-		}
-		// Gemessene Streck grösser als maximale Streckenlänge
-		else if ((Quad_GetPos()-posStart)>=MaxTrackLength){
-			accCtr = 0;
-			fsm_state = BREMSEN;
-		}
-		break;
+			// Anzahl Runden erreicht
+			if (getFlagStructure().roundCounter >= MaxNbrRounds){
+				fsm_state = BREMSEN;
+			}
+			 // Zu viele Signale erkannt
+			else if (getFlagStructure().signalCounter >= MaxNbrSignals){
+				fsm_state = BREMSEN;
+			}
+			// Gemessene Strecke grösser als maximale Streckenlänge
+			else if ((Quad_GetPos()-posStart)>=((MaxTrackLength * iGetriebe * TicksPerRev) / (Wirkumfang))){
+				fsm_state = BREMSEN;
+			}
+			break;
 
-	// Abbremsen zur Haltesignalerkennung
-	case BREMSEN:
-		accCtr++;
-		if (accCtr>=100){
-			speed--;
+		// Abbremsen zur Haltesignalerkennung
+		case BREMSEN:
+			speed-=10;
 			if (speed <= SlowVelo){
 				fsm_state = FINALES_HALTESIGNAL;
 			}
 			PID_Velo(speed);
-		}
-		break;
+			break;
 
-	// Warten auf Signal finales Haltesignal erkannt von Raspi
-	case FINALES_HALTESIGNAL:
-		PID_Velo(SlowVelo);
-		// TODO implement method getHaltesignal in Raspi.c
-		if (0)/*getHaltesignal()*/{ // finales Haltesignal erkannt
-			fsm_state = HALTESIGNAL_ANFAHREN;
-		}
+		// Warten auf Signal finales Haltesignal erkannt von Raspi
+		case FINALES_HALTESIGNAL:
+			PID_Velo(SlowVelo);
+			//Annahme, dass finales Haltesignal nie erkannt wird --> Bsp. Signal Counter bleit konstant...
+			//Abbruchbedingung für Schwenken der weissen Flagge definieren...
+			//ToDo
 
-		break;
+			if (getFlagStructure().finalHSerkannt){ // finales Haltesignal erkannt
+				HAL_GPIO_WritePin(GPIOF, SHDN_TOF_TAFEL_Pin, GPIO_PIN_SET); // Tof Tafel enable
+				resetDistanceValue(); // Reset Distance Value for next measurement
+				VL6180X_Init();
+				suspendSensorTask=0; //Enable Sensor Task
+				startTimeMeasurment();
+				fsm_state = HALTESIGNAL_ANFAHREN;
+				PID_ClearError();
 
-	// Haltesignal mit TOF erkennen
-	case HALTESIGNAL_ANFAHREN:
-		PID_Velo(SlowVelo);
-		if(haltesignal_erkennen()==TASK_OK){
-			posHaltesignal=Quad_GetPos();
-			distHaltesignal=getDistanceValue();
-			fsm_state = HALTESIGNAL_STOPPEN;
-		}
-		else{
-			//Was machen wir wenn das Haltesignal nicht erkannt wird???
-		}
-		break;
+			}
 
-	// Positionregelung vor Haltesignal
-	case HALTESIGNAL_STOPPEN:
-		PID_Pos(posHaltesignal+distHaltesignal);
-		// TODO implement method PID_InPos in pid.c
-		if (0) /*PID_InPos()*/{
-			fsm_state = STOP;
-		}
-		break;
+			#if WuerfelerkenneUndLaden_TEST
+				HAL_GPIO_WritePin(GPIOF, SHDN_TOF_TAFEL_Pin, GPIO_PIN_SET); // Tof Tafel enable
+				resetDistanceValue(); // Reset Distance Value for next measurement
+				VL6180X_Init();
+				suspendSensorTask=0; //Enable Sensor Task
+				startTimeMeasurment();
+				fsm_state = HALTESIGNAL_ANFAHREN;
+				PID_ClearError();
+			#endif
+			break;
 
-	// Warten bis Startsignal von Raspi zurückgenommen wird
-	case STOP:
-		if (0) /*!getStartSignal()*/{
-			fsm_state = STARTUP;
+		// Haltesignal mit TOF erkennen
+		case HALTESIGNAL_ANFAHREN:
+			PID_Velo(SlowVelo);
+			taskState=tof_erkennen(100);
+
+			if(taskState==TASK_OK){
+				HAL_GPIO_WritePin(GPIOF, SHDN_TOF_TAFEL_Pin, GPIO_PIN_RESET); // Tof Tafel disable
+
+				/*
+				#if WuerfelerkenneUndLaden_TEST
+					Motor_Break();
+					HAL_GPIO_WritePin(HB_Sleep_GPIO_Port, HB_Sleep_Pin, GPIO_PIN_RESET); // disable H-Bridge
+					while(1);
+				#endif*/
+
+				distHaltesignal=((getDistanceValue() * iGetriebe * TicksPerRev) / (Wirkumfang)); // Umrechnung Millimeter in Ticks
+				posHaltesignal=Quad_GetPos()+distHaltesignal; // Speicherung Position Haltesignal
+				fsm_state = HALTESIGNAL_STOPPEN;
+			}
+			else if(taskState==TASK_TIME_OVERFLOW){
+				//Was machen wir wenn das Haltesignal nicht erkannt wird???
+				#if WuerfelerkenneUndLaden_TEST
+					Motor_Break();
+					HAL_GPIO_WritePin(HB_Sleep_GPIO_Port, HB_Sleep_Pin, GPIO_PIN_RESET);
+					while(1);
+				#endif
+			}
+			else{
+				//Task is Running
+			}
+			break;
+
+		// Positionregelung vor Haltesignal
+		case HALTESIGNAL_STOPPEN:
+			PID_Velo(SlowVelo);
+			if (Quad_GetPos()>=posHaltesignal){
+				Motor_Break();
+				fsm_state = STOP;
+			}
+			/*
+			PID_Pos(posHaltesignal);
+			if (PID_InPos()){
+				fsm_state = STOP;
+			}*/
+			break;
+
+		// Warten bis Startsignal von Raspi zurückgenommen wird
+		case STOP:
+			/*
+			if (!(getFlagStructure().startSignal)){	//!getStartSignal() Was meinst du mit dem Andi?
+				fsm_state = STARTUP;
+			}*/
+
+			break;
 		}
-		break;
+		osDelay(10);
+
+	#else
+	  osDelay(9000);
+	#endif
 	}
-    osDelay(50);
-  }
-  /* USER CODE END StartDefaultTask */
+
+  /* USER CODE END FSM_Task */
 }
 
-/* USER CODE BEGIN Header_StartTask02 */
+/* USER CODE BEGIN Header_TOF_Task */
 /**
-* @brief Function implementing the myTask02 thread.
+* @brief Function implementing the tof_tsk thread.
 * @param argument: Not used
 * @retval None
 */
-/* USER CODE END Header_StartTask02 */
-void StartTask02(void const * argument)
+/* USER CODE END Header_TOF_Task */
+void TOF_Task(void const * argument)
 {
-  /* USER CODE BEGIN StartTask02 */
-  //uint8_t txData[3];
-  //char x = 'x';
-  //char y = 'y';
-  //char z = 'z';
-  uint8_t testInt;
-  /* Infinite loop */
-  for(;;)
-  {
-	  //Im Main.c gibt es bei der Initialiserung eine Funktion, die Entscheidet, ob dieser Task ausgeführt wird oder nicht
-	  if(getEnableSensorTask() == 1){
-		  /*if(measureAccel3AxisValues()==TASK_OK){
-			  testInt = getZValue();
-		  }*/
-		  if(measureDistanceValue()==TASK_OK){
-				//testInt = getDistanceValue();
-				//if(testInt <60){
-				//	__NOP();
-				//}
-		  }
-		  //txData[0] = (uint8_t) z;
-		  //txData[1] = (uint8_t) (getZValue() >> 8);
-		  //txData[2] = (uint8_t) (getZValue() & 0xff);
+  /* USER CODE BEGIN TOF_Task */
 
-		  //txData[0] = getDistanceValue();
-		  //HAL_UART_Transmit(&huart2, txData, 3, 100);
-		  osDelay(100);
-	  }
+	/* Infinite loop */
+	for(;;)
+	{
+		#if SensorTaskEnable
+		if(suspendSensorTask==0){
+			if(measureDistanceValue()==TASK_OK){}
+			osDelay(200);
+		}
 
-	  else{
-		  osDelay(5000);
-	  }
-
-  }
-  /* USER CODE END StartTask02 */
+		else{
+			//Error Handling ist still ToDo
+			osDelay(200);
+		}
+		#else
+			osDelay(9000);
+		#endif
+	}
+  /* USER CODE END TOF_Task */
 }
 
-/* USER CODE BEGIN Header_StartTask03 */
+/* USER CODE BEGIN Header_Radio_Task */
 /**
-* @brief Function implementing the myTask03 thread.
+* @brief Function implementing the radio_tsk thread.
 * @param argument: Not used
 * @retval None
 */
-/* USER CODE END Header_StartTask03 */
-void StartTask03(void const * argument)
+/* USER CODE END Header_Radio_Task */
+void Radio_Task(void const * argument)
 {
-  /* USER CODE BEGIN StartTask03 */
+  /* USER CODE BEGIN Radio_Task */
 	uint8_t firstForwardCount =0;		//Bremst motor vor Seitenwechsel
-	uint8_t firstReverseCount = 0;		//dito
+		uint8_t firstReverseCount = 0;		//dito
 
-	uint8_t enableTask = 0;
-  /* Infinite loop */
-  for(;;)
-  {
-
-	  if(enableTask == 1){
-
-	  	  //Drehrichtung FORWARD
-	  	  if(getDrehrichtung() == 108){
-
-	  		  firstReverseCount = 0;
-
-	  		  //Break function
-	  		  if(firstForwardCount==0){
-	  			  firstForwardCount++;
-	  			  Motor_Break();
-	  			  osDelay(1000);
-
-	  		  }
-
-	  		  else{													//Drive with UART1 received pwmValue
-	  			  if(PID_GetEnable()==1){
-	  				  PID_Velo((-1)*getfinalVelocity());
-	  				  PID_SetEnable(0);
-	  			  }
-	  		  }
-	  	  }
-
-	  	  	  //Drehrichtung REVERSE
-	  	  else if(getDrehrichtung() == 114){
-	  		  firstForwardCount = 0;
-
-	  		  //Break function
-	  		 if(firstReverseCount==0){
-	  			  firstReverseCount++;
-	  			  Motor_Break();
-	  			  osDelay(1000);
-	  		 }
+		//Allow H_Bridge to Control the Motors
+	#if FunkFernsteuer_BoardcomputerBetrieb
+		HAL_GPIO_WritePin(HB_Sleep_GPIO_Port, HB_Sleep_Pin, GPIO_PIN_SET);
+	#endif
 
 
-	  		 else{												//Drive with UART1 received pwmVlue
+	/* Infinite loop */
+	for(;;)
+	{
+		#if FunkFernsteuer_BoardcomputerBetrieb
 
-	  				  //Nur alle 10ms!
-	  			if(PID_GetEnable()==1){
-	  				  PID_Velo(getfinalVelocity());
-	  				  PID_SetEnable(0);
-	  			  }
-	  		  }
+		//Drehrichtung FORWARD
+		if(getDrehrichtung() == 108){
 
-	  		}
+			firstReverseCount = 0;
 
+			//Break function
+			if(firstForwardCount==0){
+				firstForwardCount++;
+				Motor_Break();
+				osDelay(1000);
+			}
+			else{													//Drive with UART1 received pwmValue
+				if(PID_GetEnable()==1){
+					PID_Velo((-1)*getfinalVelocity());
+					PID_SetEnable(0);
+					}
+				}
+			}
 
-	  	//Imlement a Error Handler witch sets de "drehrichtung" value to 0, if we dont receive Interrupts from UART1
-	  	//--> Not implemented yet
-	  	else{
-	  		 __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_3, 0);
-	  		 __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, 0);
+		//Drehrichtung REVERSE
+		else if(getDrehrichtung() == 114){
+			firstForwardCount = 0;
 
-	  	 }
+			//Break function
+			if(firstReverseCount==0){
+				firstReverseCount++;
+				Motor_Break();
+				osDelay(1000);
+			}
+			else{												//Drive with UART1 received pwmVlue
+				//Nur alle 10ms!
+				if(PID_GetEnable()==1){
+					PID_Velo(getfinalVelocity());
+					PID_SetEnable(0);
+				}
+			}
+		}
 
-	  	  osDelay(10);
+		//Imlement a Error Handler witch sets de "drehrichtung" value to 0, if we dont receive Interrupts from UART1
+		//--> Not implemented yet
+		else{
+			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_3, 0);
+			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, 0);
 
-
-	  }
-	  else{
-		  osDelay(5000);
-	  }
-
-  }
-  /* USER CODE END StartTask03 */
+		}
+		osDelay(10);
+		#else
+	  	osDelay(9000);
+		#endif
+	}
+  /* USER CODE END Radio_Task */
 }
 
-/* USER CODE BEGIN Header_StartTask04 */
+/* USER CODE BEGIN Header_UART_Task */
 /**
-* @brief Function implementing the ServoTask thread.
+* @brief Function implementing the uart_tsk thread.
 * @param argument: Not used
 * @retval None
 */
-/* USER CODE END Header_StartTask04 */
-void StartTask04(void const * argument)
+/* USER CODE END Header_UART_Task */
+void UART_Task(void const * argument)
 {
-  /* USER CODE BEGIN StartTask04 */
-  /* Infinite loop */
-	/*
-	   * Servo Angle-Control:
-	   * -90°	=> 1.1ms (PWM_Value = 11 * (480'000Counts / 200) = 26'400
-	   * 0°		=> 1.5ms (PWM_Value = 15 * (480'000Counts / 200) = 36'000
-	   * 90°	=> 1.9ms (PWM_Value = 19 * (480'000Counts / 200) = 45'600
-	 */
+  /* USER CODE BEGIN UART_Task */
+	/* Infinite loop */
 
-	uint8_t enableTask = 0;
-	uint16_t servoPWM = 0;
+	uint8_t UartSendBuffer[1];
+	UartSendBuffer[0] = 0x21;	//Opcode of UART Spec: Respond all Sensor Data
 
-  for(;;)
-  {
-	  if(enableTask ==1){
-		  servoPWM = 26400 + getSpeedGroupValue()*2740;
-		  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, servoPWM);
-		  osDelay(50);
-	  }
+	uint16_t X_Accel_buffer=0;
+	uint16_t Y_Accel_buffer=0;
+	uint16_t Z_Accel_buffer=0;
+	uint8_t changeSendByte=0;
 
-	  else{
-		  osDelay(5000);
-	  }
+	for(;;)
+	{
+		#if UARTSendRaspyData
+		switch(changeSendByte){
+			case 0:
+				UartSendBuffer[0] = 0x21;	//Opcode
+				changeSendByte++;
+				break;
+			case 1:
+				UartSendBuffer[0] = 0;		//TOF 1: Fail, its not possible to read out both Distance Sensors...
+				changeSendByte++;
+				break;
+			case 2:
+				UartSendBuffer[0] = getDistanceValue();	//Actual TOF
+				changeSendByte++;
+				break;
+			case 3:
+				X_Accel_buffer = getXValue();
+				UartSendBuffer[0] = (uint8_t) (X_Accel_buffer >> 8);		//X_Accel_high
+				changeSendByte++;
+				break;
+			case 4:
+				UartSendBuffer[0] = (uint8_t) (X_Accel_buffer & 0xff);		//X_Accel_low
+				changeSendByte++;
+				break;
+			case 5:
+				Y_Accel_buffer = getYValue();
+				UartSendBuffer[0] = (uint8_t) (Y_Accel_buffer >> 8);		//Y_Accel_high
+				changeSendByte++;
+				break;
+			case 6:
+				UartSendBuffer[0] = (uint8_t) (Y_Accel_buffer & 0xff);		//Y_Accel_low
+				changeSendByte++;
+				break;
+			//Acc. to Interface Spec. UART should case 7 be Speed High Data
+			case 7:
+				Z_Accel_buffer = getZValue();
+				UartSendBuffer[0] = (uint8_t) (Z_Accel_buffer >> 8);		//Z_Accel_high
+				changeSendByte++;
+				break;
+			//Acc. to Interface Spec. UART should case 7 be Speed Low Data
+			case 8:
+				UartSendBuffer[0] = (uint8_t) (Z_Accel_buffer & 0xff);		//Z_Accel_low
+				changeSendByte++;
+				break;
+			case 9:
+				UartSendBuffer[0] = Servo_GetAngle();		//Actual Servo Angle
+				changeSendByte++;
+				break;
+			case 10:
+				UartSendBuffer[0] = fsm_state;				//Actual FSM State
+				changeSendByte=0;
+				break;
+		}
+		#if !SensorTaskEnable
+			UartSendBuffer[3] = 0;
+			UartSendBuffer[4] = 0;
+			UartSendBuffer[5] = 0;
+			UartSendBuffer[6] = 0;
+			UartSendBuffer[7] = 0;
+			UartSendBuffer[8] = 0;
+		#endif
 
+		HAL_UART_Transmit(&huart1, UartSendBuffer, 1, 1000);
+
+		//*********Virtual Comport UART Debug**************
+		HAL_UART_Transmit(&huart2, UartSendBuffer, 1, 1000);
+		//*************************************************
+		osDelay(200);
+		#else
+		osDelay(9000);
+		#endif
+	}
+  /* USER CODE END UART_Task */
+}
+
+/* USER CODE BEGIN Header_Accel_Task */
+/**
+* @brief Function implementing the acc_tsk thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_Accel_Task */
+void Accel_Task(void const * argument)
+{
+  /* USER CODE BEGIN Accel_Task */
+	/* Infinite loop */
+	for(;;)
+	{
+		if(measureAccel3AxisValues()==TASK_OK){
+			//testInt = getZValue();
+		}
+		osDelay(10);
   }
-  /* USER CODE END StartTask04 */
+  /* USER CODE END Accel_Task */
 }
 
 /* Private application code --------------------------------------------------*/

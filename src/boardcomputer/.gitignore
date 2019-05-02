@@ -81,3 +81,6 @@ __pycache__
 *.jpg
 *.png
 *.tiff
+
+# Deep Learning
+labelimage_v1.8.1/

@@ -100,6 +100,17 @@ void PID_Pos(int32_t set_pos){
 	}
 }
 
+// Position erreicht
+// 0 = Position nicht erreicht
+// 1 = Position erreicht
+uint8_t PID_InPos(){
+	int32_t diff = set_pos_ticks-meas_pos_ticks;
+	if (diff < 0){
+		diff=diff*(-1);
+	}
+	return (diff < IN_POS_RANGE);
+}
+
 void PID_ClearError(){
 	integral_v = 0;
 	integral_p = 0;

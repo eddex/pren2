@@ -22,8 +22,8 @@ enum quad_e quad;
 void Quad_Init(){
 	ticks = 0;
 	// Encoder vorne
-	chA = HAL_GPIO_ReadPin(GPIOA, Enc_ChA_MOT_H_Pin);
-	chB = HAL_GPIO_ReadPin(GPIOA, Enc_ChB_MOT_H_Pin);
+	chA = HAL_GPIO_ReadPin(GPIOA, Enc_ChB_MOT_V_Pin);
+	chB = HAL_GPIO_ReadPin(GPIOA, Enc_ChA_MOT_V_Pin);
 
 	// Initialisierung Quadraturencoder
 	quad = s00;
@@ -48,8 +48,10 @@ int32_t Quad_GetPos(){
 
 // Samples Encoder
 void Quad_Sample(){
-	chA = HAL_GPIO_ReadPin(GPIOA, Enc_ChA_MOT_H_Pin);
-	chB = HAL_GPIO_ReadPin(GPIOA, Enc_ChB_MOT_H_Pin);
+
+	//To change the motor direction, change the Enc_ChX_MOT_V_Pin
+	chA = HAL_GPIO_ReadPin(GPIOA, Enc_ChB_MOT_V_Pin);
+	chB = HAL_GPIO_ReadPin(GPIOA, Enc_ChA_MOT_V_Pin);
 
 	// sXX: first bit = chA and second bit = chB
 

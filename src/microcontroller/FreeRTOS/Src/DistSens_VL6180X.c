@@ -34,6 +34,9 @@ taskState_t VL6180X_Init(void){
 		if(HAL_I2C_Mem_Read(&hi2c1, VL6180X_DevAddress,0x0016,2, dataBuffer, 1, 100)== HAL_OK){
 			//HAL_GPIO_WritePin(HBridgeEnable_GPIO_Port, HBridgeEnable_Pin, GPIO_PIN_SET);
 		}
+		else if(HAL_I2C_Mem_Read(&hi2c1, VL6180X_DevAddress,0x0016,2, dataBuffer, 1, 100)== HAL_TIMEOUT){
+			HAL_Delay(10);
+		}
 		else{distTaskState = TASK_ERROR;};
 	}while((dataBuffer[0] & 0x01) == 0);
 
@@ -140,38 +143,33 @@ taskState_t VL6180X_Init(void){
 	return distTaskState;
 }
 
-
-
-
-
 taskState_t measureDistanceValue(void){
 	distTaskState = TASK_OK;
+
+	/*
 	do{
 		dataBuffer[0] = 0;
 		if(HAL_I2C_Mem_Read(&hi2c1, VL6180X_DevAddress,0x004F,2, dataBuffer, 1, 100)==HAL_OK);else{distTaskState = TASK_ERROR;};
 		//dataBuffer[0] = dataBuffer[0] & 0x07; //The 3 lowests bits are relevant
 	}while((dataBuffer[0] & 0x04) != 0x04);
+*/
 
-
-	//Finally read range value
 	dataBuffer[0] = 0;
-	if(HAL_I2C_Mem_Read(&hi2c1, VL6180X_DevAddress,0x0062,2, dataBuffer, 1, 100)==HAL_OK);else{distTaskState = TASK_ERROR;};
+	if(HAL_I2C_Mem_Read(&hi2c1, VL6180X_DevAddress,0x004F,2, dataBuffer, 1, 100)==HAL_OK);else{distTaskState = TASK_ERROR;};
 
-	//Store the measured Distance Value
-	setDistanceValue(dataBuffer[0]);
+	if ((dataBuffer[0] & 0x04) == 0x04){
 
-	//Clear interrupt status flag
-	dataBuffer[0] = 0x07;
-	if(HAL_I2C_Mem_Write(&hi2c1, VL6180X_DevAddress, 0x0015,2, dataBuffer, 1, 100)==HAL_OK);else{distTaskState = TASK_ERROR;};
+		//Finally read range value
+		dataBuffer[0] = 0;
+		if(HAL_I2C_Mem_Read(&hi2c1, VL6180X_DevAddress,0x0062,2, dataBuffer, 1, 100)==HAL_OK);else{distTaskState = TASK_ERROR;};
 
-	/*if(distanceValue < 100 && distanceValue >80){
-	   HAL_GPIO_WritePin(BlueTestLed_GPIO_Port, BlueTestLed_Pin, GPIO_PIN_SET);
+		//Store the measured Distance Value
+		setDistanceValue(dataBuffer[0]);
+
+		//Clear interrupt status flag
+		dataBuffer[0] = 0x07;
+		if(HAL_I2C_Mem_Write(&hi2c1, VL6180X_DevAddress, 0x0015,2, dataBuffer, 1, 100)==HAL_OK);else{distTaskState = TASK_ERROR;};
 	}
-	else{
-	   HAL_GPIO_WritePin(BlueTestLed_GPIO_Port, BlueTestLed_Pin, GPIO_PIN_RESET);
-	}*/
 
 	return distTaskState;
 }
-
-

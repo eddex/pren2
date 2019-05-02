@@ -10,6 +10,7 @@
 #define  finalDevAddress_MMA8451 0x1D							//MMA8451 Address if Pin A is pulled up to 3.3V
 /*=========================================================================*/
 
+#define MMA8451_STATUS_00_REG     0x00
 #define MMA8451_REG_OUT_X_MSB     0x01
 #define MMA8451_REG_OUT_X_LSB     0x02
 #define MMA8451_REG_OUT_Y_MSB     0x03
