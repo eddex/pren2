@@ -567,7 +567,6 @@ void Radio_Task(void const * argument)
 		HAL_GPIO_WritePin(HB_Sleep_GPIO_Port, HB_Sleep_Pin, GPIO_PIN_SET);
 	#endif
 
-
 	/* Infinite loop */
 	for(;;)
 	{

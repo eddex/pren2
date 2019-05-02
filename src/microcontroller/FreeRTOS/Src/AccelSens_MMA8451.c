@@ -41,17 +41,18 @@ taskState_t MMA8451_Init(void){
 	dataBuffer[0] = 0x40; //Set the Reset Bit for Device
 	HAL_GPIO_WritePin(LED_Heartbeat_GPIO_Port, LED_Heartbeat_Pin, GPIO_PIN_RESET);
 	HAL_StatusTypeDef Halstate;
-	uint8_t hal_counter = 0;
+	uint8_t acc_err_counter = 0;
 	do{
 
 		Halstate = HAL_I2C_Mem_Write(&hi2c1, MMA8451_DevAddress, MMA8451_REG_CTRL_REG2,1, dataBuffer, 1, 100);
 		//if(HAL_I2C_Mem_Write(&hi2c1, MMA8451_DevAddress, MMA8451_REG_CTRL_REG2,1, dataBuffer, 1, 100)==HAL_OK);else{accelTaskState= TASK_ERROR;};
-		hal_counter++;
-	}while(Halstate==HAL_ERROR);
+		acc_err_counter++;
+	}while((Halstate==HAL_ERROR) && acc_err_counter < 10);
 	HAL_GPIO_WritePin(LED_Heartbeat_GPIO_Port, LED_Heartbeat_Pin, GPIO_PIN_SET);
 
 	//Wait while reset bit is set(automatically cleard after reset by MC)
 	//dataBuffer[0] = 0;
+	acc_err_counter = 0;
 	do{
 		/*if(HAL_I2C_Mem_Read(&hi2c1, MMA8451_DevAddress,MMA8451_REG_CTRL_REG2,1, dataBuffer, 1, 100)==HAL_OK);
 		else{
@@ -59,8 +60,8 @@ taskState_t MMA8451_Init(void){
 			dataBuffer[0] = 0; // while loop abbrechen
 		};*/
 		Halstate = HAL_I2C_Mem_Read(&hi2c1, MMA8451_DevAddress,MMA8451_REG_CTRL_REG2,1, dataBuffer, 1, 100);
-		hal_counter++;
-	}while(dataBuffer[0] != 0 || Halstate==HAL_ERROR);
+		acc_err_counter++;
+	}while((dataBuffer[0] != 0 || Halstate==HAL_ERROR) && acc_err_counter < 10);
 
 	/*
 	//Check Data in MMA8451_REG_XYZ_DATA_CFG
@@ -81,8 +82,8 @@ taskState_t MMA8451_Init(void){
 	if(HAL_I2C_Mem_Write(&hi2c1, MMA8451_DevAddress,MMA8451_REG_CTRL_REG2,1, dataBuffer, 1, 100)==HAL_OK);else{accelTaskState= TASK_ERROR;};
 
 	//Configuration of System Control Register 1
-	dataBuffer[0] = 0x3D; 	//Choose active MODE
-							//Data Rate 640 ms
+	dataBuffer[0] = 0x1D; 	//Choose active MODE
+							//Data Rate 10 ms -> 100 Hz
 							//Reduced noise
 	dataBuffer[1] = 0;
 	if(HAL_I2C_Mem_Write(&hi2c1, MMA8451_DevAddress,MMA8451_REG_CTRL_REG1,1, dataBuffer, 1, 100)==HAL_OK);else{accelTaskState= TASK_ERROR;};
