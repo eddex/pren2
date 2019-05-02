@@ -4,8 +4,8 @@ import threading
 from time import sleep
 
 import serial
-import socketio
 
+from frontend import WebStream
 from uart_handler.ticp_common import TICPCommand
 from uart_handler.ticp_common import TICPMessageTypeFactory, TICPMessageType
 from uart_handler.ticp_message import TICPMessageAllSensorData, TICPMessageAllCommandData
@@ -171,29 +171,11 @@ class _SerialInterfaceMock:
             return None
 
 
-# TODO Move helper Class to frontend Package
-
-class WebStream:
-
-    def __init__(self):
-        self.sio = socketio.Client()
-        self.sio.connect('http://192.168.10.1:5000')
-
-    def write(self, msg):
-        self.sio.emit('message', msg)
-
-    def flush(self):
-        pass
-
-    def close(self):
-        self.sio.disconnect()
-
-
 if __name__ == "__main__":
     ticp_logger = logging.getLogger()
     ticp_logger.setLevel(logging.INFO)
 
-    webStream = WebStream()
+    webStream = WebStream('http://192.168.10.1:5000')
 
     web_logger = logging.StreamHandler(webStream)
     web_logger.setLevel(logging.DEBUG)
