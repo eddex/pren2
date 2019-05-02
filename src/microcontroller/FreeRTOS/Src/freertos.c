@@ -76,12 +76,14 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define SlowVelo 100 // langsame Geschwindigkeit [mm/s]
+#define SlowVelo 200 // langsame Geschwindigkeit [mm/s]
 #define MaxVelo 3000 // maximale Geschwindigkeit [mm/s]
 #define MaxNbrSignals 10 // maximale Anzahl Signale auf der Strecke
 #define MaxNbrRounds 2 // maximale Anzahl Runden
 #define MaxLoadAttempts 4 // maximale Anzahl Würfelladeversuche
-#define MaxTrackLength 20000 // maximale Streckenlänge [mm]
+#define MaxTrackLength 30000 // maximale Streckenlänge [mm]
+#define OffsetStartpos 1000 // Offset beim Retourfahren zur Startposition zur Verhinderung überfahren der Startposition [Ticks]
+#define OffsetHaltesignal 20 // Offset Halten beim Haltesignal [mm]
 
 //fsm State wurde von Default Task hierher verschoben, damit im sendDataToRaspy Task darauf zugegriffen werden kann
 enum fsm fsm_state; // create enum for statemachine task
@@ -370,14 +372,14 @@ void FSM_Task(void const * argument)
 			PID_Velo(-SlowVelo); // Mit langsamer Geschwindigkeit an die ursprüngliche Position zurück fahren
 
 			//Wenn die ursprüngliche Position beim zurückfahren erreicht wurde
-			if ((Quad_GetPos()<posStart && taskState==TASK_OK)||(Quad_GetPos()<posStart && tryAgain ==1)){	//Konnte der Wüfel nach max. 3 Versuchen geladen werden?
+			if ((Quad_GetPos()<(posStart+OffsetStartpos) && taskState==TASK_OK)||(Quad_GetPos()<(posStart+OffsetStartpos) && tryAgain ==1)){	//Konnte der Wüfel nach max. 3 Versuchen geladen werden?
 				Motor_Break();
 				suspendSensorTask=1; //Task suspended
 				osDelay(10);
 				HAL_GPIO_WritePin(GPIOF, SHDN_TOF_KLOTZ_Pin, GPIO_PIN_RESET); // Tof Klotz disable
 				fsm_state = SCHNELLFAHRT;
 			}
-			else if((Quad_GetPos()<posStart && tryAgain==0)){	//Würfel konnte nach 3 Versuchen nicht geladen werden
+			else if((Quad_GetPos()<(posStart+OffsetStartpos) && tryAgain==0)){	//Würfel konnte nach 3 Versuchen nicht geladen werden
 				//Versuche noch einmal den Würfel zu erkennen
 				tryAgain = 1;
 				Motor_Break();
@@ -468,7 +470,7 @@ void FSM_Task(void const * argument)
 					while(1);
 				#endif*/
 
-				distHaltesignal=((getDistanceValue() * iGetriebe * TicksPerRev) / (Wirkumfang)); // Umrechnung Millimeter in Ticks
+				distHaltesignal=(((getDistanceValue()-OffsetHaltesignal) * iGetriebe * TicksPerRev) / (Wirkumfang)); // Umrechnung Millimeter in Ticks
 				posHaltesignal=Quad_GetPos()+distHaltesignal; // Speicherung Position Haltesignal
 				fsm_state = HALTESIGNAL_STOPPEN;
 			}
@@ -535,12 +537,12 @@ void TOF_Task(void const * argument)
 		#if SensorTaskEnable
 		if(suspendSensorTask==0){
 			if(measureDistanceValue()==TASK_OK){}
-			osDelay(200);
+			osDelay(100);
 		}
 
 		else{
 			//Error Handling ist still ToDo
-			osDelay(200);
+			osDelay(100);
 		}
 		#else
 			osDelay(9000);
