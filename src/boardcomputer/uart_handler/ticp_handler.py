@@ -5,7 +5,6 @@ from time import sleep
 
 import serial
 
-from frontend import WebStream
 from uart_handler.ticp_common import TICPCommand
 from uart_handler.ticp_common import TICPMessageTypeFactory, TICPMessageType
 from uart_handler.ticp_message import TICPMessageAllSensorData, TICPMessageAllCommandData
@@ -175,6 +174,7 @@ if __name__ == "__main__":
     ticp_logger = logging.getLogger()
     ticp_logger.setLevel(logging.INFO)
 
+    """
     webStream = WebStream('http://192.168.10.1:5000')
 
     web_logger = logging.StreamHandler(webStream)
@@ -186,6 +186,8 @@ if __name__ == "__main__":
     web_logger.setFormatter(formatter)
 
     ticp_logger.addHandler(web_logger)
+
+    """
 
     queueTest = queue.Queue(maxsize=1000)
     ser = serial.Serial(port="/dev/serial0", baudrate=19200, parity=serial.PARITY_NONE, stopbits=1)
