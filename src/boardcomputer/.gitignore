@@ -84,3 +84,6 @@ __pycache__
 
 # Deep Learning
 labelimage_v1.8.1/
+
+# vscode
+.vscode/
