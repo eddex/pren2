@@ -736,10 +736,14 @@ void Accel_Task(void const * argument)
 	/* Infinite loop */
 	for(;;)
 	{
+#if SensorTaskEnable
 		if(measureAccel3AxisValues()==TASK_OK){
 			//testInt = getZValue();
 		}
 		osDelay(10);
+#else
+		osDelay(9000);
+#endif
   }
   /* USER CODE END Accel_Task */
 }

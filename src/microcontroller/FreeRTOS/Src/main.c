@@ -215,9 +215,9 @@ int main(void)
    *
    * This PWM Output is used for Servomotor control
    * Servo Angle-Control:
-   * -90°	=> 1.1ms (PWM_Value = 11 * (480'000Counts / 200) = 26'400
+   * -45°	=> 1.1ms (PWM_Value = 11 * (480'000Counts / 200) = 26'400
    * 0°		=> 1.5ms (PWM_Value = 15 * (480'000Counts / 200) = 36'000
-   * 90°	=> 1.9ms (PWM_Value = 19 * (480'000Counts / 200) = 45'600
+   * 45°	=> 1.9ms (PWM_Value = 19 * (480'000Counts / 200) = 45'600
    *
    * Interrupt Enabled
    */
@@ -390,13 +390,13 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 		setfinalVelocity(0);
 	}
 	else if (receivedSpeedValue == 1){
-		setfinalVelocity(100);
+		setfinalVelocity(200);
 	}
 	else if (receivedSpeedValue == 2){
-		setfinalVelocity(300);
+		setfinalVelocity(400);
 	}
 	else if (receivedSpeedValue == 3){
-		setfinalVelocity(500);
+		setfinalVelocity(600);
 	}
 	else if (receivedSpeedValue == 4){
 		setfinalVelocity(1000);
