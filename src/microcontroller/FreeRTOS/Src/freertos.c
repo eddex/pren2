@@ -83,7 +83,7 @@
 #define MaxLoadAttempts 4 // maximale Anzahl Würfelladeversuche
 #define MaxTrackLength 30000 // maximale Streckenlänge [mm]
 #define OffsetStartpos 1000 // Offset beim Retourfahren zur Startposition zur Verhinderung überfahren der Startposition [Ticks]
-#define OffsetHaltesignal 20 // Offset Halten beim Haltesignal [mm]
+#define OffsetHaltesignal 40 // Offset Halten beim Haltesignal [mm]
 
 //fsm State wurde von Default Task hierher verschoben, damit im sendDataToRaspy Task darauf zugegriffen werden kann
 enum fsm fsm_state; // create enum for statemachine task
