@@ -20,4 +20,25 @@ class WebStream:
         pass
 
     def close(self):
-        sel.sio.disconnect()
+        self.sio.disconnect()
+
+
+class WebLoggerStream:
+
+    def __init__(self, socket):
+        """
+        Interface for Logging on Web Server
+
+        Args:
+            socket: URL of Webserver 'http://192.168.10.1:5000'
+        """
+        self.sio = socket
+
+    def write(self, msg):
+        self.sio.emit('message', msg)
+
+    def flush(self):
+        pass
+
+    def close(self):
+        self.sio.disconnect()

@@ -11,6 +11,28 @@ from uart_handler.ticp_message import TICPMessageAllSensorData, TICPMessageAllCo
 from uart_handler.ticp_message import TICPMessagePrototype
 
 
+class FSMStateStatusListenerInterface:
+
+    def notify_fsm_state_change(self, newFSM: int):
+        raise NotImplemented
+
+
+class FSMStateStatusNotifier:
+
+    def __init__(self):
+        self.subscribers = []
+
+    def subscribe_fsm_state_change(self, subscriber: FSMStateStatusListenerInterface):
+        self.subscribers.append(subscriber)
+
+    def unsubcribe_fsm_state_change(self, subscriber: FSMStateStatusListenerInterface):
+        self.subscribers.remove(subscriber)
+
+    def notify_fsm_change(self, newFSM: int):
+        for subscriber in self.subscribers:
+            subscriber.notify_fsm_state_change(newFSM)
+
+
 class TICPMessageIOStreamInterface:
     """ Defines the Interface for read/write TICPMessages to an IO Stream """
 
@@ -77,7 +99,7 @@ class _TICPToSerialAdapter(TICPMessageIOStreamInterface):
         return self._serial.in_waiting
 
 
-class TICPHandler:
+class TICPHandler(FSMStateStatusNotifier):
 
     def __init__(self, io_interface: TICPMessageIOStreamInterface):
         """
@@ -86,6 +108,8 @@ class TICPHandler:
             object: 
         """
         # Private attributes
+        super().__init__()
+
         self._io_interface = io_interface
         self._write_queue = queue.Queue(maxsize=100)
         self.serial_lock = threading.Lock()
@@ -109,6 +133,9 @@ class TICPHandler:
     def read_thread(self):
         while not self._stopped:
 
+            currentFSM = 0
+            lastFSM = 0
+
             # self.serial_lock.acquire()
             message = self._io_interface.read()
             # self.serial_lock.release()
@@ -117,6 +144,12 @@ class TICPHandler:
                 try:
                     message.handle_message()
 
+                    lastFSM = currentFSM
+                    currentFSM = message.fsm_state
+
+                    if lastFSM != currentFSM:
+                        self.notify_fsm_change(currentFSM)
+
                 except NotImplementedError:
                     # ToDo Handle if Message was not decoded right
                     pass
@@ -124,7 +157,6 @@ class TICPHandler:
                 logging.debug(
                     "TICPHandler - read_thread: Received invalid/empty message within the "
                     "timeout-> drop")
-                pass
 
     def write_thread(self):
         while not self._stopped:
@@ -132,9 +164,7 @@ class TICPHandler:
             if not self._write_queue.empty():
                 message = self._write_queue.get()
 
-                # self.serial_lock.acquire()
                 self._io_interface.write(message)
-                # self.serial_lock.release()
 
     def stop_handler(self):
         self._stopped = True

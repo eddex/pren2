@@ -37,6 +37,12 @@ async def pictureBroadcast(socketID, base64: str):
     await sio.emit('pictureBroadcast', base64)
 
 
+@sio.on('smallPictureSet')
+async def smallPictureBroadcast(socketID, base64: str):
+    print("Received and broadcasted Picture")
+    await sio.emit('smallPictureBroadcast', base64)
+
+
 app.router.add_get('/', index)
 app.router.add_static('/', path='./html/')
 

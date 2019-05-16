@@ -22,11 +22,11 @@ NOTSET = 0
 
 
 class BaseCameraConfig:
-    CAMERA_RESOLUTION = (960, 640)
+    CAMERA_RESOLUTION = (416, 416)
     CAMERA_BRIGHTNESS = 50
-    CAMERA_FRAMERATE = 15
-    CAMERA_SHUTTERSPEED = 30000
-    CAMERA_EXPOSUREMODE = 'sport'
+    CAMERA_FRAMERATE = 30
+    CAMERA_SHUTTERSPEED = 15000
+    CAMERA_EXPOSUREMODE = 'off'
     CAMERA_ROTATION = 0
     CAMERA_ISO = 800
 
@@ -46,6 +46,7 @@ class BaseConfig(BaseCameraConfig, BaseUARTConfig):
     LOG_WEBSERVER_ADDRESS = 'http://192.168.10.1:5000'
 
     LOG_ENABLE_WEB_LOGGING = None
+    LOG_ENABLE_WEB_PICTURE_LOGGING = None
 
     """ 
     If set to True: Data written to the TICP Interface will be loopbacked over memory without 
@@ -59,17 +60,20 @@ class BaseConfig(BaseCameraConfig, BaseUARTConfig):
 class DevelopmentConfig(BaseConfig):
     LOG_LEVEL = INFO
     LOG_ENABLE_WEB_LOGGING = True
+    LOG_ENABLE_WEB_PICTURE_LOGGING = True
 
     TICP_ENABLE_DEBUG = True
 
 
 class TestConfig(BaseConfig):
     LOG_ENABLE_WEB_LOGGING = True
+    LOG_ENABLE_WEB_PICTURE_LOGGING = True
 
     TICP_ENABLE_DEBUG = False
 
 
 class ProductionConfig(BaseConfig):
     LOG_ENABLE_WEB_LOGGING = False
+    LOG_ENABLE_WEB_PICTURE_LOGGING = False
 
     TICP_ENABLE_DEBUG = False
