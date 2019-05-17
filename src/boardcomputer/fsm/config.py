@@ -28,11 +28,13 @@ NOTSET = 0
 class BaseImageAnalysisCPUConfig:
     DEVICE = 'CPU'
     MODEL_NAME = 'frozen_darknet_yolov3_tiny_model_signals_CPU'
+    DRAW_RECTANGLES = True
 
 
 class BaseImageAnalysisNCS2Config:
     DEVICE = 'MYRIAD'
     MODEL_NAME = 'frozen_darknet_yolov3_tiny_model_signals_MYRIAD'
+    DRAW_RECTANGLES = False
 
 
 class BaseCameraConfig:

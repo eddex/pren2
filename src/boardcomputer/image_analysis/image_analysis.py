@@ -4,6 +4,7 @@ import cv2
 import time
 import numpy as np, math
 import logging
+from concurrent.futures import ThreadPoolExecutor
 
 try:
     # Raspberry
@@ -54,6 +55,14 @@ class DetectionObject():
         self.class_id = class_id
         self.confidence = confidence
 
+class DetectionObjectFaster():
+    class_id = 0
+    confidence = 0.0
+
+    def __init__(self, class_id, confidence):
+        self.class_id = class_id
+        self.confidence = confidence
+
 class ImageAnalyzer:
 
 
@@ -76,8 +85,9 @@ class ImageAnalyzer:
         return retval
 
 
-    def ParseYOLOV3Output(self, blob, resized_im_h, resized_im_w, original_im_h, original_im_w, threshold, objects):
+    def ParseYOLOV3Output(self, blob, resized_im_h, resized_im_w, original_im_h, original_im_w, threshold):
 
+        objects = []
         out_blob_h = blob.shape[2]
 
         side = out_blob_h
@@ -110,6 +120,32 @@ class ImageAnalyzer:
                     if prob < threshold:
                         continue
                     obj = DetectionObject(x, y, height, width, j, prob, (original_im_h / resized_im_h), (original_im_w / resized_im_w))
+                    objects.append(obj)
+        return objects
+
+
+    def ParseYOLOV3OutputFaster(self, blob, threshold):
+
+        objects = []
+        out_blob_h = blob.shape[2]
+
+        side = out_blob_h # == 13
+
+        side_square = side * side
+        output_blob = blob.flatten()
+
+        for i in range(side_square):
+            for n in range(num):
+                obj_index = EntryIndex(side, coords, classes, n * side * side + i, coords)
+                scale = output_blob[obj_index]
+                if (scale < threshold):
+                    continue
+                for j in range(classes):
+                    class_index = EntryIndex(side, coords, classes, n * side_square + i, coords + 1 + j)
+                    prob = scale * output_blob[class_index]
+                    if prob < threshold:
+                        continue
+                    obj = DetectionObjectFaster(j, prob)
                     objects.append(obj)
         return objects
 
@@ -160,7 +196,7 @@ class ImageAnalyzer:
             return None
         
 
-        print('\nget image: {0:.4f}s'.format(time.time() - start_time))
+        print('\nget image: {0:.5f}s'.format(time.time() - start_time))
         start_time = time.time()
 
         resized_image = cv2.resize(img, (self.new_w, self.new_h), interpolation = cv2.INTER_CUBIC)
@@ -171,16 +207,29 @@ class ImageAnalyzer:
         prepimg = prepimg.transpose((0, 3, 1, 2))  # NHWC to NCHW
         outputs = self.exec_net.infer(inputs={self.input_blob: prepimg})
 
-        print('neural network: {0:.4f}s'.format(time.time() - start_time))
+        print('neural network: {0:.5f}s'.format(time.time() - start_time))
         start_time = time.time()
 
         objects = []
 
+        executor = ThreadPoolExecutor(max_workers=4)
+        results = []
         for output in outputs.values():
-            objects = self.ParseYOLOV3Output(output, self.new_h, self.new_w, self.camera_height, self.camera_width, 0.4, objects)
+            if not config.DRAW_RECTANGLES:
+                promise = executor.submit(self.ParseYOLOV3OutputFaster, output, 0.4)
+                results.append(promise)
+            else:
+                promise = executor.submit(self.ParseYOLOV3Output, output, self.new_h, self.new_w, self.camera_height, self.camera_width, 0.4)
+                results.append(promise)
+
+        for r in results:
+            objects.extend(r.result())
 
         for object in objects:
             print(LABELS[object.class_id], object.confidence, "%")
+
+        print('parse output: {0:.5f}s'.format(time.time() - start_time))
+        start_time = time.time()
 
         # Filtering overlapping boxes
         objlen = len(objects)
@@ -193,6 +242,9 @@ class ImageAnalyzer:
                         objects[i], objects[j] = objects[j], objects[i]
                     objects[j].confidence = 0.0
 
+        print('filter overlapping boxes: {0:.5f}s'.format(time.time() - start_time))
+        start_time = time.time()
+
         # Drawing boxes
         for obj in objects:
             if obj.confidence < 0.02:
@@ -201,11 +253,12 @@ class ImageAnalyzer:
             confidence = obj.confidence
             #if confidence >= 0.2:
             label_text = LABELS[label] + " (" + "{:.1f}".format(confidence * 100) + "%)"
-            cv2.rectangle(img, (obj.xmin, obj.ymin), (obj.xmax, obj.ymax), box_color, box_thickness)
-            cv2.putText(img, label_text, (obj.xmin, obj.ymin - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, label_text_color, 1)
+            if config.DRAW_RECTANGLES:
+                cv2.rectangle(img, (obj.xmin, obj.ymin), (obj.xmax, obj.ymax), box_color, box_thickness)
+                cv2.putText(img, label_text, (obj.xmin, obj.ymin - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, label_text_color, 1)
 
-        print('parse output & draw boxes: {0:.4f}s'.format(time.time() - start_time))
-        print('total time: {0:.4f}s'.format(time.time() - initial_time))
+        print('draw boxes: {0:.5f}s'.format(time.time() - start_time))
+        print('total time: {0:.5f}s'.format(time.time() - initial_time))
         print('FPS: {0:.2f}\n'.format(1 / (time.time() - initial_time)))
 
         cv2.imwrite("Result.jpg", img)
