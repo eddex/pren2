@@ -604,13 +604,16 @@ void Radio_Task(void const * argument)
 			//Break function
 			if(firstForwardCount==0){
 				firstForwardCount++;
-				Motor_Break();
+				Motor_V_Break();
+				Motor_H_Break();
 				osDelay(1000);
 			}
 			else{													//Drive with UART1 received pwmValue
-				if(PID_GetEnable()==1){
-					PID_Velo((-1)*getfinalVelocity());
-					PID_SetEnable(0);
+				if(PID_V_GetEnable()==1){
+					PID_V_Velo((-1)*getfinalVelocity());
+					PID_H_Velo((-1)*getfinalVelocity());
+					PID_V_SetEnable(0);
+					PID_H_SetEnable(0);
 					}
 				}
 			}
@@ -622,14 +625,17 @@ void Radio_Task(void const * argument)
 			//Break function
 			if(firstReverseCount==0){
 				firstReverseCount++;
-				Motor_Break();
+				Motor_V_Break();
+				Motor_H_Break();
 				osDelay(1000);
 			}
 			else{												//Drive with UART1 received pwmVlue
 				//Nur alle 10ms!
-				if(PID_GetEnable()==1){
-					PID_Velo(getfinalVelocity());
-					PID_SetEnable(0);
+				if(PID_V_GetEnable()==1){
+					PID_V_Velo(getfinalVelocity());
+					PID_H_Velo(getfinalVelocity());
+					PID_V_SetEnable(0);
+					PID_H_SetEnable(0);
 				}
 			}
 		}
