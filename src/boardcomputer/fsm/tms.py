@@ -14,6 +14,8 @@ import socketio
 
 from frontend.WebStream import WebLoggerStream
 from fsm.config import BaseConfig, DevelopmentConfig
+from fsm.signal_type import SignalType, Signal
+from image_analysis.image_analysis import ImageAnalyzer 
 from uart_handler.ticp_handler import FSMStateStatusListenerInterface
 from uart_handler.ticp_handler import TICPHandler
 from uart_handler.ticp_handler import _SerialInterfaceMock
@@ -21,50 +23,6 @@ from uart_handler.ticp_handler import _TICPToSerialAdapter
 from uart_handler.ticp_message import TICPMessageAllCommandData
 
 sys.path.append(BaseConfig.APP_IMPORT_PATH)
-
-
-class SignalType(Enum):
-    INFO = 0
-    STOP = 1
-    START = 2
-
-
-class Signal(Enum):
-    INFO_ZERO = (SignalType.INFO, 0)
-    INFO_ONE = (SignalType.INFO, 1)
-    INFO_TWO = (SignalType.INFO, 2)
-    INFO_THREE = (SignalType.INFO, 3)
-    INFO_FOUR = (SignalType.INFO, 4)
-    INFO_FIVE = (SignalType.INFO, 5)
-    INFO_SIX = (SignalType.INFO, 6)
-    INFO_SEVEN = (SignalType.INFO, 7)
-    INFO_EIGHT = (SignalType.INFO, 8)
-    INFO_NINE = (SignalType.INFO, 9)
-
-    STOP_ZERO = (SignalType.STOP, 0)
-    STOP_ONE = (SignalType.STOP, 1)
-    STOP_TWO = (SignalType.STOP, 2)
-    STOP_THREE = (SignalType.STOP, 3)
-    STOP_FOUR = (SignalType.STOP, 4)
-    STOP_FIVE = (SignalType.STOP, 5)
-    STOP_SIX = (SignalType.STOP, 6)
-    STOP_SEVEN = (SignalType.STOP, 7)
-    STOP_EIGHT = (SignalType.STOP, 8)
-    STOP_NINE = (SignalType.STOP, 9)
-
-    START = (SignalType.START, 0)
-
-    def __init__(self, signal_type: SignalType, number: int):
-        self._signal_type = signal_type
-        self._number = number
-
-    @property
-    def signal_type(self) -> SignalType:
-        return self._signal_type
-
-    @property
-    def number(self) -> int:
-        return self._number
 
 
 class MCFSMStates(Enum):
@@ -97,6 +55,7 @@ class TrainManagementSystem(FSMStateStatusListenerInterface):
         self._camera = None
         self._socketio = None
         self.ticp_handler = None
+        self._image_amalyzer = None
 
         self._init_logging_local()
 
@@ -111,6 +70,7 @@ class TrainManagementSystem(FSMStateStatusListenerInterface):
 
         self._init_uart()
         self._init_camera()
+        self._init_image_analyzer()
 
         self._current_mcu_fsm = MCFSMStates(0)
         self.round_counter = 0
@@ -246,6 +206,10 @@ class TrainManagementSystem(FSMStateStatusListenerInterface):
         self.ticp_handler.subscribe_fsm_state_change(self)
 
         self.log.info("TICP Interface initialized")
+
+    def _init_image_analyzer(self):
+        self._image_amalyzer = ImageAnalyzer()
+        self._image_amalyzer.initialize()
 
     def _init_camera(self):
         self.log.info("Start Initialize Camera:")
