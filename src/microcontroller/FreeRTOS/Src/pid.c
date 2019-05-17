@@ -53,18 +53,22 @@ void PID_Velo(int32_t set_velo){
 	}
 
 	integral_v += error;
+	/*
 	// Anti Reset Windup
 	if(integral_v >= Aw_v){
 		integral_v = Aw_v;
 	} else if(integral_v <= -Aw_v){
 		integral_v = -Aw_v;
 	}
+	*/
 	iVal = (Ki_v * integral_v) / 1000;
 	pidVal = pVal + iVal;
 	// Begrenzung falls PWM-Wert grösser 100% wird
 	if (pidVal > 100) {
+		integral_v -= error; // Anti Reset Windup
 		Motor_SetVelo(100);
 	} else if (pidVal < -100) {
+		integral_v -= error; // Anti Reset Windup
 		Motor_SetVelo(-100);
 	} else {
 		Motor_SetVelo(pidVal);
