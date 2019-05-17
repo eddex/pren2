@@ -1,4 +1,8 @@
-import serial
+try:
+    import serial
+except:
+    serial = None
+    print('INFO: Can\'t import module \'serial\' on dev computer. Import is ignored.')
 
 # ---------------------------------------------------------------------------
 #   Level related stuff
@@ -21,6 +25,16 @@ DEBUG = 10
 NOTSET = 0
 
 
+class BaseImageAnalysisCPUConfig:
+    DEVICE = 'CPU'
+    MODEL_NAME = 'frozen_darknet_yolov3_tiny_model_signals_CPU'
+
+
+class BaseImageAnalysisNCS2Config:
+    DEVICE = 'MYRIAD'
+    MODEL_NAME = 'frozen_darknet_yolov3_tiny_model_signals_MYRIAD'
+
+
 class BaseCameraConfig:
     CAMERA_RESOLUTION = (416, 416)
     CAMERA_BRIGHTNESS = 50
@@ -34,8 +48,9 @@ class BaseCameraConfig:
 class BaseUARTConfig:
     SERIAL_PORT = '/dev/serial0'
     SERIAL_BAUD = 19200
-    SERIAL_PARITY = serial.PARITY_NONE
     SERIAL_STOPBIT = 1
+    if (serial != None):
+        SERIAL_PARITY = serial.PARITY_NONE
 
 
 class BaseConfig(BaseCameraConfig, BaseUARTConfig):
