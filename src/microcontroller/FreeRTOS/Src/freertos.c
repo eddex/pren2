@@ -49,6 +49,15 @@
 /* USER CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/
+#include "stm32f3xx_hal.h"
+#include <motor_v.h>
+#include <motor_h.h>
+#include <pid_v.h>
+#include <pid_h.h>
+#include <quad_v.h>
+#include <quad_h.h>
+#include <velocity_v.h>
+#include <velocity_h.h>
 #include "FreeRTOS.h"
 #include "task.h"
 #include "main.h"
@@ -61,10 +70,6 @@
 #include "usart.h"
 #include "RadioModule.h"
 #include "tim.h"
-#include "motor.h"
-#include "pid.h"
-#include "velocity.h"
-#include "quad.h"
 #include "servo.h"
 #include "fsm.h"
 #include "DataTransfer.h"
@@ -80,10 +85,10 @@
 #define MaxVelo 3000 // maximale Geschwindigkeit [mm/s]
 #define MaxNbrSignals 10 // maximale Anzahl Signale auf der Strecke
 #define MaxNbrRounds 2 // maximale Anzahl Runden
-#define MaxLoadAttempts 4 // maximale Anzahl Würfelladeversuche
-#define MaxTrackLength 30000 // maximale Streckenlänge [mm]
+#define MaxLoadAttempts 2 // maximale Anzahl Würfelladeversuche
+#define MaxTrackLength 25000 // maximale Streckenlänge [mm]
 #define OffsetStartpos 1000 // Offset beim Retourfahren zur Startposition zur Verhinderung überfahren der Startposition [Ticks]
-#define OffsetHaltesignal 40 // Offset Halten beim Haltesignal [mm]
+#define OffsetHaltesignal 80 // Offset Halten beim Haltesignal [mm]
 
 //fsm State wurde von Default Task hierher verschoben, damit im sendDataToRaspy Task darauf zugegriffen werden kann
 enum fsm fsm_state; // create enum for statemachine task
@@ -239,6 +244,7 @@ void FSM_Task(void const * argument)
   /* USER CODE BEGIN FSM_Task */
 
 	fsm_state = STARTUP; // Default State -> Startup
+	uint32_t fsm_state_test;
 
 	taskState_t taskState;
 	taskState = TASK_RUNNING;
@@ -277,7 +283,7 @@ void FSM_Task(void const * argument)
 
 				//Enable H-Bridge Module of Motor1 and Motor2
 				HAL_GPIO_WritePin(HB_Sleep_GPIO_Port, HB_Sleep_Pin, GPIO_PIN_SET);
-				posStart=Quad_GetPos();
+				posStart=Quad_V_GetPos();
 				startTimeMeasurment();			//Zeitmessung beginnen für Abbruchkriterium des Tasks
 				fsm_state = WURFEL_ERKENNEN;
 			}
@@ -299,7 +305,8 @@ void FSM_Task(void const * argument)
 
 		// Warten bis Würfel erkennt wird
 		case WURFEL_ERKENNEN:
-			PID_Velo(SlowVelo); //Mit langsamer Geschwindigkeit fahren
+			PID_V_Velo(SlowVelo); //Mit langsamer Geschwindigkeit fahren
+			PID_H_Velo(SlowVelo);
 
 			taskState = tof_erkennen(130); //Versuche den Wüfel in einer Distanz bis zu 13cm zu erkennen
 
@@ -369,20 +376,23 @@ void FSM_Task(void const * argument)
 		case STARTPOSITION:
 
 
-			PID_Velo(-SlowVelo); // Mit langsamer Geschwindigkeit an die ursprüngliche Position zurück fahren
+			PID_V_Velo(-SlowVelo); // Mit langsamer Geschwindigkeit an die ursprüngliche Position zurück fahren
+			PID_H_Velo(-SlowVelo);
 
 			//Wenn die ursprüngliche Position beim zurückfahren erreicht wurde
-			if ((Quad_GetPos()<(posStart+OffsetStartpos) && taskState==TASK_OK)||(Quad_GetPos()<(posStart+OffsetStartpos) && tryAgain ==1)){	//Konnte der Wüfel nach max. 3 Versuchen geladen werden?
-				Motor_Break();
+			if ((Quad_V_GetPos()<(posStart+OffsetStartpos) && taskState==TASK_OK)||(Quad_V_GetPos()<(posStart+OffsetStartpos) && tryAgain ==1)){	//Konnte der Wüfel nach max. 3 Versuchen geladen werden?
+				Motor_V_Break();
+				Motor_H_Break();
 				suspendSensorTask=1; //Task suspended
 				osDelay(10);
 				HAL_GPIO_WritePin(GPIOF, SHDN_TOF_KLOTZ_Pin, GPIO_PIN_RESET); // Tof Klotz disable
 				fsm_state = SCHNELLFAHRT;
 			}
-			else if((Quad_GetPos()<(posStart+OffsetStartpos) && tryAgain==0)){	//Würfel konnte nach 3 Versuchen nicht geladen werden
+			else if((Quad_V_GetPos()<(posStart+OffsetStartpos) && tryAgain==0)){	//Würfel konnte nach 3 Versuchen nicht geladen werden
 				//Versuche noch einmal den Würfel zu erkennen
 				tryAgain = 1;
-				Motor_Break();
+				Motor_V_Break();
+				Motor_H_Break();
 				startTimeMeasurment();
 				fsm_state = WURFEL_ERKENNEN;
 			}
@@ -401,7 +411,8 @@ void FSM_Task(void const * argument)
 			if (speed >= MaxVelo){
 				speed = MaxVelo;
 			}
-			PID_Velo(speed);
+			PID_V_Velo(speed);
+			PID_H_Velo(speed);
 
 			// Anzahl Runden erreicht
 			if (getFlagStructure().roundCounter >= MaxNbrRounds){
@@ -412,7 +423,7 @@ void FSM_Task(void const * argument)
 				fsm_state = BREMSEN;
 			}
 			// Gemessene Strecke grösser als maximale Streckenlänge
-			else if ((Quad_GetPos()-posStart)>=((MaxTrackLength * iGetriebe * TicksPerRev) / (Wirkumfang))){
+			else if ((Quad_V_GetPos()-posStart)>=((MaxTrackLength * iGetriebe * TicksPerRev) / (Wirkumfang))){
 				fsm_state = BREMSEN;
 			}
 			break;
@@ -423,12 +434,14 @@ void FSM_Task(void const * argument)
 			if (speed <= SlowVelo){
 				fsm_state = FINALES_HALTESIGNAL;
 			}
-			PID_Velo(speed);
+			PID_V_Velo(speed);
+			PID_H_Velo(speed);
 			break;
 
 		// Warten auf Signal finales Haltesignal erkannt von Raspi
 		case FINALES_HALTESIGNAL:
-			PID_Velo(SlowVelo);
+			PID_V_Velo(SlowVelo);
+			PID_H_Velo(SlowVelo);
 			//Annahme, dass finales Haltesignal nie erkannt wird --> Bsp. Signal Counter bleit konstant...
 			//Abbruchbedingung für Schwenken der weissen Flagge definieren...
 			//ToDo
@@ -440,7 +453,8 @@ void FSM_Task(void const * argument)
 				suspendSensorTask=0; //Enable Sensor Task
 				startTimeMeasurment();
 				fsm_state = HALTESIGNAL_ANFAHREN;
-				PID_ClearError();
+				PID_V_ClearError();
+				PID_H_ClearError();
 
 			}
 
@@ -451,13 +465,15 @@ void FSM_Task(void const * argument)
 				suspendSensorTask=0; //Enable Sensor Task
 				startTimeMeasurment();
 				fsm_state = HALTESIGNAL_ANFAHREN;
-				PID_ClearError();
+				PID_V_ClearError();
+				PID_H_ClearError();
 			#endif
 			break;
 
 		// Haltesignal mit TOF erkennen
 		case HALTESIGNAL_ANFAHREN:
-			PID_Velo(SlowVelo);
+			PID_V_Velo(SlowVelo);
+			PID_H_Velo(SlowVelo);
 			taskState=tof_erkennen(100);
 
 			if(taskState==TASK_OK){
@@ -471,13 +487,14 @@ void FSM_Task(void const * argument)
 				#endif*/
 
 				distHaltesignal=(((getDistanceValue()-OffsetHaltesignal) * iGetriebe * TicksPerRev) / (Wirkumfang)); // Umrechnung Millimeter in Ticks
-				posHaltesignal=Quad_GetPos()+distHaltesignal; // Speicherung Position Haltesignal
+				posHaltesignal=Quad_V_GetPos()+distHaltesignal; // Speicherung Position Haltesignal
 				fsm_state = HALTESIGNAL_STOPPEN;
 			}
 			else if(taskState==TASK_TIME_OVERFLOW){
 				//Was machen wir wenn das Haltesignal nicht erkannt wird???
 				#if WuerfelerkenneUndLaden_TEST
-					Motor_Break();
+					Motor_V_Break();
+					Motor_H_Break();
 					HAL_GPIO_WritePin(HB_Sleep_GPIO_Port, HB_Sleep_Pin, GPIO_PIN_RESET);
 					while(1);
 				#endif
@@ -489,9 +506,12 @@ void FSM_Task(void const * argument)
 
 		// Positionregelung vor Haltesignal
 		case HALTESIGNAL_STOPPEN:
-			PID_Velo(SlowVelo);
-			if (Quad_GetPos()>=posHaltesignal){
-				Motor_Break();
+			PID_V_Velo(SlowVelo);
+			PID_H_Velo(SlowVelo);
+			if (Quad_V_GetPos()>=posHaltesignal){
+				Motor_V_Break();
+				Motor_H_Break();
+				HAL_GPIO_WritePin(HB_Sleep_GPIO_Port, HB_Sleep_Pin, GPIO_PIN_RESET); // Disable H-Bridge
 				fsm_state = STOP;
 			}
 			/*
@@ -507,9 +527,11 @@ void FSM_Task(void const * argument)
 			if (!(getFlagStructure().startSignal)){	//!getStartSignal() Was meinst du mit dem Andi?
 				fsm_state = STARTUP;
 			}*/
+			fsm_state = fsm_state;
 
 			break;
 		}
+		fsm_state_test=fsm_state;
 		osDelay(10);
 
 	#else

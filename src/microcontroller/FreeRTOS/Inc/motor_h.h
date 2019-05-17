@@ -5,8 +5,10 @@
  *      Author: ANDREAS
  */
 
-#ifndef MOTOR_H_
-#define MOTOR_H_
+#ifndef MOTOR_H_H_
+#define MOTOR_H_H_
+
+#include <stdint.h>
 
 #define TicksPerRev 48 								// Ticks pro Motorumdrehung
 #define iGetriebe 9.68 								// Untersetzung
@@ -17,12 +19,12 @@
 #define PWM_MAX_VALUE 5000
 
 // Init Routine
-void Motor_Init();
+void Motor_H_Init();
 
 // Set velocity
-void Motor_SetVelo(int8_t velo);
+void Motor_H_SetVelo(int8_t velo);
 
 // Break
-void Motor_Break();
+void Motor_H_Break();
 
 #endif /* MOTOR_H_ */

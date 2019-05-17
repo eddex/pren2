@@ -5,8 +5,10 @@
  *      Author: ANDREAS
  */
 
-#ifndef PID_H_
-#define PID_H_
+#ifndef PID_V_H_
+#define PID_V_H_
+
+#include <stdint.h>
 
 // Geschwindigkeitsregler
 #define Kp_v 30 	// P-Anteil Geschwindigkeitsregler
@@ -24,25 +26,25 @@
 #define IN_POS_RANGE 5 // Range für InPosition Methode
 
 // Init Routine
-void PID_Init();
+void PID_V_Init();
 
 // Geschwindigkeitsregler mm/s
-void PID_Velo(int32_t set_velo);
+void PID_V_Velo(int32_t set_velo);
 
 // Positionsregler mm
-void PID_Pos(int32_t set_pos);
+void PID_V_Pos(int32_t set_pos);
 
 // Position erreicht
 // 0 = Position nicht erreicht
 // 1 = Position erreicht
-uint8_t PID_InPos();
+uint8_t PID_V_InPos();
 
 // Error reset
-void PID_ClearError();
+void PID_V_ClearError();
 
 //Für Zugriff auf Variable vom Main aus und FreeRTOS
-void PID_SetEnable(uint8_t);
-uint8_t PID_GetEnable(void);
+void PID_V_SetEnable(uint8_t enableFlag);
+uint8_t PID_V_GetEnable(void);
 
 
-#endif /* PID_H_ */
+#endif /* PID_V_H_ */
