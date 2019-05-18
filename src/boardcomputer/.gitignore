@@ -83,7 +83,8 @@ __pycache__
 *.tiff
 
 # Deep Learning
-labelimage_v1.8.1/
+labelImg_1.8.1.exe
+img*.txt
 
 # vscode
 .vscode/

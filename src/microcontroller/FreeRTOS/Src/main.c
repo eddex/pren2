@@ -47,8 +47,16 @@
   ******************************************************************************
   */
 /* Includes ------------------------------------------------------------------*/
-#include "main.h"
 #include "stm32f3xx_hal.h"
+#include <motor_v.h>
+#include <motor_h.h>
+#include <pid_v.h>
+#include <pid_h.h>
+#include <quad_v.h>
+#include <quad_h.h>
+#include <velocity_v.h>
+#include <velocity_h.h>
+#include "main.h"
 #include "cmsis_os.h"
 #include "i2c.h"
 #include "tim.h"
@@ -59,10 +67,6 @@
 #include "RadioModule.h"
 #include "AccelSens_MMA8451.h"
 #include "DistSens_VL6180X.h"
-#include "velocity.h"
-#include "quad.h"
-#include "motor.h"
-#include "pid.h"
 #include "servo.h"
 #include "DataTransfer.h"
 #include "SEGGER/SEGGER_SYSVIEW.h"
@@ -161,10 +165,14 @@ int main(void)
   /*
    *Motor Regelung
    */
-  Quad_Init();
-  Velo_Init();
-  PID_Init();
-  Motor_Init();
+  Quad_V_Init();
+  Quad_H_Init();
+  Velo_V_Init();
+  Velo_H_Init();
+  PID_V_Init();
+  PID_H_Init();
+  Motor_V_Init();
+  Motor_H_Init();
   Servo_Init();
 
   //If Sensortask enabled
@@ -472,14 +480,17 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
   		//Every 10ms
   		if(tim15Count10ms == 200){
-  			Velo_Sample();
+  			Velo_V_Sample();
+  			Velo_H_Sample();
   			tim15Count10ms=0;
-  			PID_SetEnable(1);										//Enables the PID funciton in freertos.c --> MotorControl
+  			PID_V_SetEnable(1);										//Enables the PID funciton in freertos.c --> MotorControl
+  			PID_H_SetEnable(1);
 
   			incrementTimeMeasurmentValue();							//Variable for Timemeasurement
   		}
   		//Every 50us
-  		Quad_Sample();
+  		Quad_V_Sample();
+  		Quad_H_Sample();
   }
   /* USER CODE END Callback 1 */
 }
