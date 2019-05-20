@@ -7,9 +7,14 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 import multiprocessing as mp
 import threading
+from picamera import PiCamera
+from fsm.config import BaseConfig
+import socketio
+import base64
 
 try:
     # Raspberry
+    sys.path.insert(0, '/opt/intel/openvino/python/python3.5')
     from armv7l.openvino.inference_engine import IENetwork, IEPlugin
     from fsm.config import BaseImageAnalysisNCS2Config as config
 except:
@@ -122,6 +127,9 @@ class NcsWorker(object):
         #self.new_h = int(camera_height * min(self.m_input_size/camera_width, self.m_input_size/camera_height))
         self.new_w = 416
         self.new_h = 416
+
+        #self._socketio = socketio.Client()
+        #self._socketio.connect('http://192.168.0.1:5000')
         
 
     # l = Search list
@@ -131,6 +139,15 @@ class NcsWorker(object):
             return l.index(x)
         else:
             return notfoundvalue
+
+
+    def showPic(self, img):
+        image = cv2.imencode(".jpeg", img)[1]
+
+        b64_bytes = base64.b64encode(image)
+        b64_str = b64_bytes.decode()
+
+        #self._socketio.emit('pictureSet', b64_str)
 
 
     def image_preprocessing(self, color_image):
@@ -145,6 +162,8 @@ class NcsWorker(object):
         prepimg = canvas
         prepimg = prepimg[np.newaxis, :, :, :]     # Batch size axis add
         prepimg = prepimg.transpose((0, 3, 1, 2))  # NHWC to NCHW
+
+        #self.showPic(prepimg.copy())
         return prepimg
 
 
@@ -216,6 +235,7 @@ class NcsWorker(object):
 class ImageAnalyzer:
 
     def __init__(self):
+
         self.running = True
 
     def IntersectionOverUnion(self, box_1, box_2):
@@ -278,6 +298,7 @@ class ImageAnalyzer:
 
     def camThread(self, frameBuffer, camera_width, camera_height, vidfps):
 
+        '''
         cam = cv2.VideoCapture(0)
         if cam.isOpened() != True:
             print("USB Camera Open Error!!!")
@@ -285,20 +306,43 @@ class ImageAnalyzer:
         cam.set(cv2.CAP_PROP_FPS, vidfps)
         cam.set(cv2.CAP_PROP_FRAME_WIDTH, camera_width)
         cam.set(cv2.CAP_PROP_FRAME_HEIGHT, camera_height)
-
+        '''
         #img = cv2.imread("/home/larry/work/tiny-yolov3-on-intel-neural-compute-stick-2/images/5-1.jpg")
         #img = cv2.imread("/home/pi/pren2/src/boardcomputer/image_analysis/5-1_416.jpg")
+
+        baseConfig = BaseConfig()
+
+        _camera = PiCamera()
+        _camera.resolution = baseConfig.CAMERA_RESOLUTION
+        _camera.brightness = baseConfig.CAMERA_BRIGHTNESS
+        _camera.framerate = baseConfig.CAMERA_FRAMERATE
+        _camera.shutter_speed = baseConfig.CAMERA_SHUTTERSPEED
+        _camera.exposure_mode = baseConfig.CAMERA_EXPOSUREMODE
+        _camera.rotation = baseConfig.CAMERA_ROTATION
+        # _camera.color_effects = (128 , 128)
+        _camera.iso = baseConfig.CAMERA_ISO
+
+        time.sleep(2)
+
+        color_image = np.empty((_camera.resolution[1], _camera.resolution[0], 3), dtype=np.uint8)
 
         while self.running:
 
             # USB Camera Stream Read
+            '''
             s, color_image = cam.read()
-            
             if not s:
                 continue
+            '''
+
+            # PyCam Stream read
+            _camera.capture(color_image, format='bgr', use_video_port=True)
+            
+            # if frame buffer full, remove oldest
             if frameBuffer.full():
                 frameBuffer.get()
             
+
             frameBuffer.put(color_image.copy())
 
 
@@ -361,6 +405,25 @@ class ImageAnalyzer:
 
     def initialize(self):
         
+
+        baseConfig = BaseConfig()
+
+        _camera = PiCamera()
+        _camera.resolution = baseConfig.CAMERA_RESOLUTION
+        _camera.brightness = baseConfig.CAMERA_BRIGHTNESS
+        _camera.framerate = baseConfig.CAMERA_FRAMERATE
+        _camera.shutter_speed = baseConfig.CAMERA_SHUTTERSPEED
+        _camera.exposure_mode = baseConfig.CAMERA_EXPOSUREMODE
+        _camera.rotation = baseConfig.CAMERA_ROTATION
+        # _camera.color_effects = (128 , 128)
+        _camera.iso = baseConfig.CAMERA_ISO
+
+        time.sleep(2)
+
+        self.cam = _camera
+        self.raw_image = np.empty((_camera.resolution[1], _camera.resolution[0], 3), dtype=np.uint8)
+        self.cam.capture(self.raw_image, format='bgr', use_video_port=True)
+
         self.camera_width = 800
         self.camera_height = 600
         self.new_w = int(self.camera_width * min(m_input_size/self.camera_width, m_input_size/self.camera_height))
@@ -369,12 +432,14 @@ class ImageAnalyzer:
         model_xml = "image_analysis/model/{}.xml".format(config.MODEL_NAME)
         model_bin = "image_analysis/model/{}.bin".format(config.MODEL_NAME)
 
+        '''
         self.cam = cv2.VideoCapture(0)
         self.cam.set(cv2.CAP_PROP_FPS, 30)
         self.cam.set(cv2.CAP_PROP_FRAME_WIDTH, self.camera_width)
         self.cam.set(cv2.CAP_PROP_FRAME_HEIGHT, self.camera_height)
         self.cam.read()
-
+        '''
+        
         self.plugin = IEPlugin(device=config.DEVICE)
         if "CPU" in config.DEVICE:
             self.plugin.add_cpu_extension("libcpu_extension_sse4.so")
@@ -398,26 +463,30 @@ class ImageAnalyzer:
 
         #img = cv2.imread("/home/larry/work/tiny-yolov3-on-intel-neural-compute-stick-2/images/5-1.jpg")
         
-        
+        '''
         success, img = self.cam.read()
         if (success == False):
             logging.getLogger().warn('no image from cam. is the camera connected?')
             return None
-        
+        '''
+        self.cam.capture(self.raw_image, format='bgr', use_video_port=True)
 
-        print('\nget image: {0:.5f}s'.format(time.time() - start_time))
-        start_time = time.time()
+        #print('\nget image: {0:.5f}s'.format(time.time() - start_time))
+        #start_time = time.time()
 
-        resized_image = cv2.resize(img, (self.new_w, self.new_h), interpolation = cv2.INTER_CUBIC)
-        canvas = np.full((m_input_size, m_input_size, 3), 128)
-        canvas[(m_input_size-self.new_h)//2:(m_input_size-self.new_h)//2 + self.new_h,(m_input_size-self.new_w)//2:(m_input_size-self.new_w)//2 + self.new_w,  :] = resized_image
+        resized_image = []
+        for row in self.raw_image[:416]:
+            resized_image.append(row[:416])
+
+        canvas = np.full((m_input_size, m_input_size, 3), 0)
+        canvas[:416,:416, :] = resized_image
         prepimg = canvas
         prepimg = prepimg[np.newaxis, :, :, :]     # Batch size axis add
         prepimg = prepimg.transpose((0, 3, 1, 2))  # NHWC to NCHW
         outputs = self.exec_net.infer(inputs={self.input_blob: prepimg})
 
-        print('neural network: {0:.5f}s'.format(time.time() - start_time))
-        start_time = time.time()
+        #print('neural network: {0:.5f}s'.format(time.time() - start_time))
+        #start_time = time.time()
 
         objects = []
 
@@ -425,7 +494,7 @@ class ImageAnalyzer:
         results = []
         for output in outputs.values():
             if not config.DRAW_RECTANGLES:
-                promise = executor.submit(ParseYOLOV3OutputFaster, output, 0.4)
+                promise = executor.submit(self.ParseYOLOV3Output, output, self.new_h, self.new_w, self.camera_height, self.camera_width, 0.4)
                 results.append(promise)
             else:
                 promise = executor.submit(self.ParseYOLOV3Output, output, self.new_h, self.new_w, self.camera_height, self.camera_width, 0.4)
@@ -437,8 +506,8 @@ class ImageAnalyzer:
         for object in objects:
             print(LABELS[object.class_id], object.confidence, "%")
 
-        print('parse output: {0:.5f}s'.format(time.time() - start_time))
-        start_time = time.time()
+        #print('parse output: {0:.5f}s'.format(time.time() - start_time))
+        #start_time = time.time()
 
         # Filtering overlapping boxes
         objlen = len(objects)
@@ -451,8 +520,8 @@ class ImageAnalyzer:
                         objects[i], objects[j] = objects[j], objects[i]
                     objects[j].confidence = 0.0
 
-        print('filter overlapping boxes: {0:.5f}s'.format(time.time() - start_time))
-        start_time = time.time()
+        #print('filter overlapping boxes: {0:.5f}s'.format(time.time() - start_time))
+        #start_time = time.time()
 
         # Drawing boxes
         for obj in objects:
@@ -462,15 +531,16 @@ class ImageAnalyzer:
             confidence = obj.confidence
             #if confidence >= 0.2:
             label_text = LABELS[label] + " (" + "{:.1f}".format(confidence * 100) + "%)"
-            if config.DRAW_RECTANGLES:
-                cv2.rectangle(img, (obj.xmin, obj.ymin), (obj.xmax, obj.ymax), box_color, box_thickness)
-                cv2.putText(img, label_text, (obj.xmin, obj.ymin - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, label_text_color, 1)
+            if not config.DRAW_RECTANGLES:
+                cv2.rectangle(self.raw_image, (obj.xmin, obj.ymin), (obj.xmax, obj.ymax), box_color, box_thickness)
+                cv2.putText(self.raw_image, label_text, (obj.xmin, obj.ymin - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, label_text_color, 1)
+                cv2.imwrite("/home/pi/boardcomputer/image_analysis/Result.jpg", self.raw_image)
 
-        print('draw boxes: {0:.5f}s'.format(time.time() - start_time))
-        print('total time: {0:.5f}s'.format(time.time() - initial_time))
-        print('FPS: {0:.2f}\n'.format(1 / (time.time() - initial_time)))
+        #print('draw boxes: {0:.5f}s'.format(time.time() - start_time))
+        #print('total time: {0:.5f}s'.format(time.time() - initial_time))
+        print('FPS: {0:.2f}'.format(1 / (time.time() - initial_time)))
 
-        cv2.imwrite("Result.jpg", img)
+        #cv2.imwrite("/home/pi/boardcomputer/image_analysis/Result.jpg", self.raw_image)
 
     def Dispose(self):
         '''
@@ -484,6 +554,8 @@ if __name__ == "__main__":
     '''
     Only for testing.
     '''
+
     ia = ImageAnalyzer()
+    #ia.initialize_async()
     ia.initialize_async()
     ia.analyze_image()
