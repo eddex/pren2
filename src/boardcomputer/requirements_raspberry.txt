@@ -1,0 +1,2 @@
+picamera==1.13
+socketio==0.1.7
