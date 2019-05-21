@@ -34,6 +34,7 @@ num = 3
 anchors = [10,14, 23,27, 37,58, 81,82, 135,169, 344,319]
 
 LABELS = ("info-3", "info-9", "info-4", "stop-5", "stop-2", "stop-9", "info-1")
+LABELS_TMS = (Signal.INFO_THREE, Signal.INFO_NINE, Signal.INFO_FOUR, Signal.STOP_FIVE, Signal.STOP_TWO, Signal.STOP_NINE, Signal.INFO_ONE)
 
 processes = []
 
@@ -396,6 +397,7 @@ class ImageAnalyzer:
                     r = results.get()
                     if len(r) > 0:
                         print ('class: {}'.format(r[0].class_id))
+                        #return LABELS_TMS[r[0].class_id]
                     print ('{:04f}, FPS: {}'.format(time.time() - t, 1/(time.time() - t)))
                     t = time.time()
             except KeyboardInterrupt:
