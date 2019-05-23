@@ -43,7 +43,7 @@ if there are errors regarding your execution policy, run powershell as admin and
 ### camera
 Takes pictures with the camera attached to the Raspberry Pi board.
 
-### fsm
+### tms
 The finite state machine for the boardcomputer.
 
 ### image_analysis
