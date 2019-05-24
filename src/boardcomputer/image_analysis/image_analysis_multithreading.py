@@ -19,8 +19,6 @@ except:
     from openvino.inference_engine import IENetwork, IEPlugin
     from fsm.config import BaseImageAnalysisNCS2Config as config
 
-m_input_size = 416
-
 yolo_scale_13 = 13
 yolo_scale_26 = 26
 yolo_scale_52 = 52
@@ -103,7 +101,6 @@ class NcsWorker(object):
         self.frameBuffer = frame_buffer
         self.model_xml = "image_analysis/model/{}.xml".format(config.MODEL_NAME)
         self.model_bin = "image_analysis/model/{}.bin".format(config.MODEL_NAME)
-        self.m_input_size = 416
         self.threshold = 0.4
         self.num_requests = 4
         self.inferred_request = [0] * self.num_requests
@@ -139,30 +136,14 @@ class NcsWorker(object):
             return not_found_value
 
 
-    def image_preprocessing(self, color_image):
-        #resized_image = color_image
-        ##resized_image = cv2.resize(color_image, (self.new_w, self.new_h), interpolation = cv2.INTER_CUBIC)
-        resized_image = []
-        for row in color_image[:416]:
-            resized_image.append(row[:416])
-
-        canvas = np.full((self.m_input_size, self.m_input_size, 3), 0)
-        canvas[:416, :416, :] = resized_image
-        prepimg = canvas
-        prepimg = prepimg[np.newaxis, :, :, :]     # Batch size axis add
-        prepimg = prepimg.transpose((0, 3, 1, 2))  # NHWC to NCHW
-
-        return prepimg
-
-
     def skip_frame_measurement(self):
-            surplustime_per_second = (1000 - self.predict_async_time)
-            if surplustime_per_second > 0.0:
-                frame_per_millisecond = (1000 / self.video_fps)
-                total_skip_frame = surplustime_per_second / frame_per_millisecond
-                self.skip_frame = int(total_skip_frame / self.num_requests)
-            else:
-                self.skip_frame = 0
+        surplustime_per_second = (1000 - self.predict_async_time)
+        if surplustime_per_second > 0.0:
+            frame_per_millisecond = (1000 / self.video_fps)
+            total_skip_frame = surplustime_per_second / frame_per_millisecond
+            self.skip_frame = int(total_skip_frame / self.num_requests)
+        else:
+            self.skip_frame = 0
 
 
     def intersection_over_union(self, box_1, box_2):
@@ -194,7 +175,7 @@ class NcsWorker(object):
                 return
             self.roop_frame = 0
 
-            prepared_image = self.image_preprocessing(self.frameBuffer.get())
+            prepared_image = self.frameBuffer.get()
             reqnum = self.get_index_of_item_in_list(self.inferred_request, 0)
 
             if reqnum > -1:
@@ -209,6 +190,7 @@ class NcsWorker(object):
 
             cnt, dev = heapq.heappop(self.heap_request)
 
+            # check if device is ready
             if self.exec_net.requests[dev].wait(0) == 0:
                 self.exec_net.requests[dev].wait(-1)
 
@@ -242,8 +224,26 @@ class ImageAnalyzer:
     def __init__(self):
 
         self.running = True  # set to False to stop all processes
-        self.results = mp.Queue()  # results will be written into this queue
+        self.m_input_size = 416
 
+
+    def prepare_image_for_processing(self, color_image):
+        #resized_image = color_image
+        ##resized_image = cv2.resize(color_image, (self.new_w, self.new_h), interpolation = cv2.INTER_CUBIC)
+
+        # resize image to shape 416x416 by cutting off the edges
+        # the images should already be 416x416 from the camera..
+        resized_image = []
+        for row in color_image[:416]:
+            resized_image.append(row[:416])
+
+        canvas = np.full((self.m_input_size, self.m_input_size, 3), 0)
+        canvas[:416, :416, :] = resized_image
+        prepimg = canvas
+        prepimg = prepimg[np.newaxis, :, :, :]     # Batch size axis add
+        prepimg = prepimg.transpose((0, 3, 1, 2))  # NHWC to NCHW
+
+        return prepimg
 
     def cam_thread(self, frame_buffer):
         """
@@ -297,7 +297,8 @@ class ImageAnalyzer:
             if frame_buffer.full():
                 frame_buffer.get()
 
-            frame_buffer.put(color_image.copy())
+            preprocessed_image = self.prepare_image_for_processing(color_image.copy())
+            frame_buffer.put(preprocessed_image)
 
 
     def async_detection(self, ncs_worker):
@@ -328,11 +329,12 @@ class ImageAnalyzer:
 
         mp.set_start_method('forkserver')
         frame_buffer = mp.Queue(10)
+        results = mp.Queue()
 
         # Start async signal detection
 
         # Activation the detection algorithm
-        p = mp.Process(target=self.detect_signals, args=(self.results, frame_buffer, video_fps), daemon=True)
+        p = mp.Process(target=self.detect_signals, args=(results, frame_buffer, video_fps), daemon=True)
         p.start()
         processes.append(p)
 
@@ -342,15 +344,16 @@ class ImageAnalyzer:
         p = mp.Process(target=self.cam_thread, args=frame_buffer, daemon=True)
         p.start()
         processes.append(p)
+        return results
 
 
-    def detect_signal(self, signal_type):
+    def detect_signal(self, results):
 
         t = time.time()
         while True:            
             try:
-                if self.results.qsize() > 0:
-                    r = self.results.get()
+                if results.qsize() > 0:
+                    r = results.get()
                     if len(r) > 0:
                         print('class: {}'.format(r[0].class_id))
                         #return LABELS_TMS[r[0].class_id]
@@ -366,4 +369,6 @@ if __name__ == "__main__":
     Only for testing.
     '''
     ia = ImageAnalyzer()
-    ia.initialize()
+    results = ia.initialize()
+    while True:
+        ia.detect_signal(results)
