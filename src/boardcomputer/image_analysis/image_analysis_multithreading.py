@@ -228,8 +228,8 @@ class ImageAnalyzer:
 
 
     def prepare_image_for_processing(self, color_image):
-        #resized_image = color_image
-        ##resized_image = cv2.resize(color_image, (self.new_w, self.new_h), interpolation = cv2.INTER_CUBIC)
+        # resized_image = color_image
+        # resized_image = cv2.resize(color_image, (self.new_w, self.new_h), interpolation = cv2.INTER_CUBIC)
 
         # resize image to shape 416x416 by cutting off the edges
         # the images should already be 416x416 from the camera..
@@ -341,7 +341,7 @@ class ImageAnalyzer:
         time.sleep(7)
 
         # Start filling frame buffer from camera
-        p = mp.Process(target=self.cam_thread, args=frame_buffer, daemon=True)
+        p = mp.Process(target=self.cam_thread, args=(frame_buffer,), daemon=True)
         p.start()
         processes.append(p)
         return results
