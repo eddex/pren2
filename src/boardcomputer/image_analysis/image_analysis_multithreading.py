@@ -1,3 +1,6 @@
+#import sys
+#[sys.path.append(i) for i in ['.', '..']]
+
 from fsm.signals import Signal
 import os, sys, heapq
 import cv2
@@ -17,7 +20,7 @@ try:
 except:
     # Dev PC
     from openvino.inference_engine import IENetwork, IEPlugin
-    from fsm.config import BaseImageAnalysisNCS2Config as config
+    from fsm.config import BaseImageAnalysisCPUConfig as config
 
 yolo_scale_13 = 13
 yolo_scale_26 = 26
@@ -224,6 +227,7 @@ class ImageAnalyzer:
     def __init__(self):
 
         self.running = True  # set to False to stop all processes
+        self.search_high_signals = True # set to false to search for low signals
         self.m_input_size = 416
 
 
@@ -232,13 +236,21 @@ class ImageAnalyzer:
         # resized_image = cv2.resize(color_image, (self.new_w, self.new_h), interpolation = cv2.INTER_CUBIC)
 
         # resize image to shape 416x416 by cutting off the edges
-        # the images should already be 416x416 from the camera..
+        # the images should already be 416x416 from the PiCamera.
         resized_image = []
         for row in color_image[:416]:
             resized_image.append(row[:416])
 
+        # create all black 416x416 image
         canvas = np.full((self.m_input_size, self.m_input_size, 3), 0)
-        canvas[:416, :416, :] = resized_image
+        
+        if self.search_high_signals:
+            # searching for info and start signals in upper half of the image
+            canvas[:208, :416, :] = resized_image
+        else:
+            # stop signals are in the lower half of the image
+            canvas[208:416, :416, :] = resized_image
+
         prepimg = canvas
         prepimg = prepimg[np.newaxis, :, :, :]     # Batch size axis add
         prepimg = prepimg.transpose((0, 3, 1, 2))  # NHWC to NCHW
@@ -265,6 +277,7 @@ class ImageAnalyzer:
         #img = cv2.imread("/home/larry/work/tiny-yolov3-on-intel-neural-compute-stick-2/images/5-1.jpg")
         #img = cv2.imread("/home/pi/pren2/src/boardcomputer/image_analysis/5-1_416.jpg")
 
+        # initialise PiCamera
         base_config = BaseConfig()
 
         camera = PiCamera()
@@ -274,7 +287,6 @@ class ImageAnalyzer:
         camera.shutter_speed = base_config.CAMERA_SHUTTERSPEED
         camera.exposure_mode = base_config.CAMERA_EXPOSUREMODE
         camera.rotation = base_config.CAMERA_ROTATION
-        # camera.color_effects = (128 , 128)
         camera.iso = base_config.CAMERA_ISO
 
         time.sleep(2)
