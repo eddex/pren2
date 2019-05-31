@@ -39,12 +39,12 @@ class BaseImageAnalysisNCS2Config:
 
 class BaseCameraConfig:
     CAMERA_RESOLUTION = (416, 416)
-    CAMERA_BRIGHTNESS = 50
-    CAMERA_FRAMERATE = 30
-    CAMERA_SHUTTERSPEED = 15000
+    CAMERA_BRIGHTNESS = 55  # 0 - 100, default 50
+    CAMERA_FRAMERATE = 15
+    CAMERA_SHUTTERSPEED = 3100
     CAMERA_EXPOSUREMODE = 'off'
     CAMERA_ROTATION = 0
-    CAMERA_ISO = 800
+    CAMERA_ISO = 1200  # 0 = auto, 1600 = max
 
 
 class BaseUARTConfig:
