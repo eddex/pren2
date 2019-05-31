@@ -109,7 +109,7 @@ class NcsWorker(object):
         self.inferred_request = [0] * self.num_requests
         self.heap_request = []
         self.inferred_cnt = 0
-        self.plugin = IEPlugin(device="MYRIAD")
+        self.plugin = IEPlugin(device=config.DEVICE)
         self.net = IENetwork(model=self.model_xml, weights=self.model_bin)
         self.input_blob = next(iter(self.net.inputs))
         self.exec_net = self.plugin.load(network=self.net, num_requests=self.num_requests)
