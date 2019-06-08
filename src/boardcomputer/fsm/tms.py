@@ -5,7 +5,7 @@ import sys
 import threading
 from collections import Counter
 from enum import Enum
-from time import sleep
+from time import sleep, time
 
 import cv2
 import numpy as np
@@ -13,8 +13,8 @@ import serial
 import socketio
 
 from frontend.WebStream import WebLoggerStream
-from fsm.config import BaseConfig, DevelopmentConfig
-from fsm.signal_type import SignalType, Signal
+from fsm.config import BaseConfig, DevelopmentConfig, TestConfig, ProductionConfig
+from fsm.signals import SignalType, Signal
 from image_analysis.image_analysis import ImageAnalyzer 
 from uart_handler.ticp_handler import FSMStateStatusListenerInterface
 from uart_handler.ticp_handler import TICPHandler
@@ -52,7 +52,6 @@ class TrainManagementSystem(FSMStateStatusListenerInterface):
         self.serial_lock = threading.Lock()
         self._log = None
         self._serial = None
-        self._camera = None
         self._socketio = None
         self.ticp_handler = None
         self._image_amalyzer = None
@@ -64,12 +63,16 @@ class TrainManagementSystem(FSMStateStatusListenerInterface):
                 self._init_socketio()
                 self._init_logging_webserver()
 
-            # TODO Specifiy Exeption
             except:
                 self.log.info("Unable to connect to Webservice. Logging local instead")
 
         self._init_uart()
-        self._init_camera()
+
+        if self.config.INIT_CAMERA_IN_TMS:
+            self._camera = None
+            self._init_camera()
+
+
         self._init_image_analyzer()
 
         self._current_mcu_fsm = MCFSMStates(0)
@@ -85,12 +88,6 @@ class TrainManagementSystem(FSMStateStatusListenerInterface):
         while self.running or self._current_mcu_fsm != MCFSMStates.STOP:
             pass
 
-            while self._current_mcu_fsm != MCFSMStates.SCHNELLFAHRT:
-                pass
-
-            currentSignal = self._detect_signal()
-
-            pass
 
     def _initialize(self):
         self.log.info("Train Inizialized")
@@ -102,6 +99,8 @@ class TrainManagementSystem(FSMStateStatusListenerInterface):
     def _signal_recognition(self):
 
         self.log.info("Start with Signal recognition")
+
+        t_start_signal_detected = time()
 
         while self.round_counter < self.rounds_to_drive:
 
@@ -122,39 +121,65 @@ class TrainManagementSystem(FSMStateStatusListenerInterface):
 
             elif signal.signal_type is SignalType.START:
                 self.log.info("Start Signal detected")
-                self.round_counter += 1
+                t_detection = time()
+                dt = t_detection - t_start_signal_detected
 
+                if dt > self.config.START_SIGNAL_DETECTION_COOLDOWN:
+                    self.log.info("Round Counter was incrementet")
+                    self.round_counter += 1
+                    t_start_signal_detected = time()
+                else:
+                    self.log.info("Signal deteted during Cooldown and therefore no actiion taken")
+
+
+            # Send updated Status to MC
             msg = TICPMessageAllCommandData.from_values(start_signal=True,
                                                         round_counter=self.round_counter,
                                                         stop_signal=False)
-
             self.ticp_handler.write_message(msg)
 
         self._searching_stop_signal()
 
     def _searching_stop_signal(self):
 
+        self.log.info("Start searching for stop signal")
         # Returns the Stop Signal which was detected most
-        Counter(self.info_signals).most_common()[0][0]
+        info_signal = Counter(self.info_signals).most_common()[0][0]
+
+        self.log.info("Stopping as soon as {} Signal is detected".format(info_signal.number))
 
         stop_signal_detected = False
 
         while not stop_signal_detected:
+
             signal = self._detect_signal()
+
             if signal is None:
-                pass
+                self.log.info("No Signal detected")
+
             elif signal.signal_type is SignalType.STOP:
-                stop_signal_detected = True
+
+                if signal.number is info_signal.number:
+                    stop_signal_detected = True
 
         msg = TICPMessageAllCommandData.from_values(start_signal=True,
                                                     round_counter=self.round_counter,
                                                     stop_signal=True)
-        # TODO
-        pass
+
+        for _ in range(0,10):
+            self.ticp_handler.write_message(msg)
+
+        self.shutdown()
+
+    def shutdown(self):
+        self.ticp_handler.stop_handler()
+        self.running = False
 
     def notify_fsm_state_change(self, newFSM: int):
         self._current_mcu_fsm = MCFSMStates(newFSM)
-        self._signal_recognition()
+
+        if self._current_mcu_fsm is MCFSMStates.SCHNELLFAHRT:
+            self._signal_recognition()
 
     def _detect_signal(self) -> Signal:
 
@@ -257,10 +282,12 @@ if __name__ == "__main__":
         tms.run()
 
     elif environment == 'test':
-        pass
+        tms = TrainManagementSystem(TestConfig())
+        tms.run()
 
     elif environment == 'prod':
-        pass
+        tms = TrainManagementSystem(ProductionConfig())
+        tms.run()
 
     else:
         raise ValueError('Invalide enviroment name')

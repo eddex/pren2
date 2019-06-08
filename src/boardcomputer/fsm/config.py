@@ -71,11 +71,17 @@ class BaseConfig(BaseCameraConfig, BaseUARTConfig):
     """
     TICP_ENABLE_DEBUG = None
 
+    LOG_LEVEL = None
+
     RUN_NUMBEROFROUNDS = 2
+
+    # Cooldown after Detecting a Start Signal
+    START_SIGNAL_DETECTION_COOLDOWN = 4
+    INIT_CAMERA_IN_TMS = False
 
 
 class DevelopmentConfig(BaseConfig):
-    LOG_LEVEL = INFO
+    LOG_LEVEL = DEBUG
     LOG_ENABLE_WEB_LOGGING = True
     LOG_ENABLE_WEB_PICTURE_LOGGING = True
 
@@ -83,6 +89,7 @@ class DevelopmentConfig(BaseConfig):
 
 
 class TestConfig(BaseConfig):
+    LOG_LEVEL = DEBUG
     LOG_ENABLE_WEB_LOGGING = True
     LOG_ENABLE_WEB_PICTURE_LOGGING = True
 
@@ -90,7 +97,7 @@ class TestConfig(BaseConfig):
 
 
 class ProductionConfig(BaseConfig):
-    LOG_ENABLE_WEB_LOGGING = False
+    LOG_LEVEL = INFO
+    LOG_ENABLE_WEB_LOGGING = True
     LOG_ENABLE_WEB_PICTURE_LOGGING = False
-
     TICP_ENABLE_DEBUG = False
