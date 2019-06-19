@@ -15,7 +15,7 @@ import socketio
 from frontend.WebStream import WebLoggerStream
 from fsm.config import BaseConfig, DevelopmentConfig, TestConfig, ProductionConfig
 from fsm.signals import SignalType, Signal
-from image_analysis.image_analysis import ImageAnalyzer 
+from image_analysis.image_analysis_multithreading import ImageAnalyzer 
 from uart_handler.ticp_handler import FSMStateStatusListenerInterface
 from uart_handler.ticp_handler import TICPHandler
 from uart_handler.ticp_handler import _SerialInterfaceMock
@@ -54,7 +54,8 @@ class TrainManagementSystem(FSMStateStatusListenerInterface):
         self._serial = None
         self._socketio = None
         self.ticp_handler = None
-        self._image_amalyzer = None
+        self._image_amalyzer = ImageAnalyzer()
+        self._image_amalyzer.initialize()
 
         self._init_logging_local()
 
@@ -143,6 +144,7 @@ class TrainManagementSystem(FSMStateStatusListenerInterface):
     def _searching_stop_signal(self):
 
         self.log.info("Start searching for stop signal")
+        self._image_amalyzer.search_high_signals = False
         # Returns the Stop Signal which was detected most
         info_signal = Counter(self.info_signals).most_common()[0][0]
 
@@ -188,11 +190,7 @@ class TrainManagementSystem(FSMStateStatusListenerInterface):
                           dtype=np.uint8)
         self._camera.capture(output, format='bgr', use_video_port=True)
 
-        # TODO Verarbeitung
-        signal_type = None  # TODO
-
-        if self.config.LOG_ENABLE_WEB_LOGGING and self.config.LOG_ENABLE_WEB_PICTURE_LOGGING:
-            self._upload_image()
+        signal_type = self._image_amalyzer.detect_signal()
 
         self.log.info("End of Detection")
 

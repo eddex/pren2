@@ -31,8 +31,41 @@ coords = 4
 num = 3
 anchors = [10,14, 23,27, 37,58, 81,82, 135,169, 344,319]
 
-LABELS = ("info-3", "info-9", "info-4", "stop-5", "stop-2", "stop-9", "info-1")
-LABELS_TMS = (Signal.INFO_THREE, Signal.INFO_NINE, Signal.INFO_FOUR, Signal.STOP_FIVE, Signal.STOP_TWO, Signal.STOP_NINE, Signal.INFO_ONE)
+LABELS = (
+    "signal-1",
+    "signal-2",
+    "signal-3",
+    "signal-4",
+    "signal-5",
+    "signal-6",
+    "signal-7",
+    "signal-8",
+    "signal-9",
+    "signal-start",)
+
+LABELS_TMS_INFO = (
+    Signal.INFO_ONE,
+    Signal.INFO_TWO,
+    Signal.INFO_THREE,
+    Signal.INFO_FOUR,
+    Signal.INFO_FIVE,
+    Signal.INFO_SIX,
+    Signal.INFO_SEVEN,
+    Signal.INFO_EIGHT,
+    Signal.INFO_NINE,
+    Signal.START)
+
+LABELS_TMS_STOP = (
+    Signal.STOP_ONE,
+    Signal.STOP_TWO,
+    Signal.STOP_THREE,
+    Signal.STOP_FOUR,
+    Signal.STOP_FIVE,
+    Signal.STOP_SIX,
+    Signal.STOP_SEVEN,
+    Signal.STOP_EIGHT,
+    Signal.STOP_NINE,
+    Signal.START)
 
 processes = []
 
@@ -229,6 +262,7 @@ class ImageAnalyzer:
         self.running = True  # set to False to stop all processes
         self.search_high_signals = True # set to false to search for low signals
         self.m_input_size = 416
+        self.results = mp.Queue()
 
 
     def prepare_image_for_processing(self, color_image):
@@ -341,12 +375,11 @@ class ImageAnalyzer:
 
         mp.set_start_method('forkserver')
         frame_buffer = mp.Queue(10)
-        results = mp.Queue()
 
         # Start async signal detection
 
         # Activation the detection algorithm
-        p = mp.Process(target=self.detect_signals, args=(results, frame_buffer, video_fps), daemon=True)
+        p = mp.Process(target=self.detect_signals, args=(self.results, frame_buffer, video_fps), daemon=True)
         p.start()
         processes.append(p)
 
@@ -356,19 +389,21 @@ class ImageAnalyzer:
         p = mp.Process(target=self.cam_thread, args=(frame_buffer,), daemon=True)
         p.start()
         processes.append(p)
-        return results
 
 
-    def detect_signal(self, results):
+    def detect_signal(self) -> Signal:
 
         t = time.time()
         while True:            
             try:
-                if results.qsize() > 0:
-                    r = results.get()
+                if self.results.qsize() > 0:
+                    r = self.results.get()
                     if len(r) > 0:
                         print('class: {}'.format(r[0].class_id))
-                        #return LABELS_TMS[r[0].class_id]
+                        if (self.search_high_signals):
+                             return LABELS_TMS_INFO[r[0].class_id]
+                        else:
+                             return LABELS_TMS_STOP[r[0].class_id]
                     print('{:04f}, FPS: {}'.format(time.time() - t, 1/(time.time() - t)))
                     t = time.time()
             except KeyboardInterrupt:
@@ -381,6 +416,6 @@ if __name__ == "__main__":
     Only for testing.
     '''
     ia = ImageAnalyzer()
-    results = ia.initialize()
+    ia.initialize()
     while True:
-        ia.detect_signal(results)
+        ia.detect_signal()
