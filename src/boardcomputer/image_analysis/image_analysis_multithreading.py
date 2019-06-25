@@ -29,7 +29,6 @@ yolo_scale_52 = 52
 classes = 7
 coords = 4
 num = 3
-anchors = [10,14, 23,27, 37,58, 81,82, 135,169, 344,319]
 
 LABELS = (
     "signal-1",
@@ -41,7 +40,7 @@ LABELS = (
     "signal-7",
     "signal-8",
     "signal-9",
-    "signal-start",)
+    "signal-start")
 
 LABELS_TMS_INFO = (
     Signal.INFO_ONE,
@@ -397,9 +396,13 @@ class ImageAnalyzer:
         while True:            
             try:
                 if self.results.qsize() > 0:
-                    r = self.results.get()
-                    if len(r) > 0:
-                        print('class: {}'.format(r[0].class_id))
+                    result_set = self.results.get()
+                    if len(result_set) > 0:
+                        best_result = result_set[0]
+                        for r in result_set:
+                            if r.confidence > best_result.confidence:
+                                best_result = r
+                        print('class: {}'.format(best_result.class_id))
                         if (self.search_high_signals):
                              return LABELS_TMS_INFO[r[0].class_id]
                         else:
