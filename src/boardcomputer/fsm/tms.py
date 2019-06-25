@@ -105,9 +105,7 @@ class TrainManagementSystem(FSMStateStatusListenerInterface):
 
         while self.round_counter < self.rounds_to_drive:
 
-            signal = self._detect_signal()
-
-            # TODO Handle Multiple Signals (foreach)
+            signal = self._image_amalyzer.detect_signal()
 
             if signal is None:
                 self.log.info("No Signal detected")
@@ -154,7 +152,7 @@ class TrainManagementSystem(FSMStateStatusListenerInterface):
 
         while not stop_signal_detected:
 
-            signal = self._detect_signal()
+            signal = self._image_amalyzer.detect_signal()
 
             if signal is None:
                 self.log.info("No Signal detected")
@@ -182,19 +180,6 @@ class TrainManagementSystem(FSMStateStatusListenerInterface):
 
         if self._current_mcu_fsm is MCFSMStates.SCHNELLFAHRT:
             self._signal_recognition()
-
-    def _detect_signal(self) -> Signal:
-
-        self.log.info("Start Detection")
-        output = np.empty((self.config.CAMERA_RESOLUTION[0], self.config.CAMERA_RESOLUTION[1], 3),
-                          dtype=np.uint8)
-        self._camera.capture(output, format='bgr', use_video_port=True)
-
-        signal_type = self._image_amalyzer.detect_signal()
-
-        self.log.info("End of Detection")
-
-        return signal_type
 
     def _upload_image(self, image) -> None:
 
