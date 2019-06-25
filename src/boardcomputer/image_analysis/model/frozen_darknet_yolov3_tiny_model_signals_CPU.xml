@@ -1,5 +1,5 @@
 <?xml version="1.0" ?>
-<net batch="1" name="frozen_darknet_yolov3_tiny_model_CPU" version="5">
+<net batch="1" name="frozen_darknet_yolov3_model" version="5">
 	<layers>
 		<layer id="0" name="inputs" precision="FP32" type="Input">
 			<output>
@@ -34,7 +34,7 @@
 				<biases offset="1728" size="64"/>
 			</blobs>
 		</layer>
-		<layer id="2" name="LeakyReLU_2332" precision="FP32" type="ReLU">
+		<layer id="2" name="LeakyReLU_2330" precision="FP32" type="ReLU">
 			<data negative_slope="0.10000000149011612"/>
 			<input>
 				<port id="0">
@@ -95,7 +95,7 @@
 				<biases offset="20224" size="128"/>
 			</blobs>
 		</layer>
-		<layer id="5" name="LeakyReLU_2327" precision="FP32" type="ReLU">
+		<layer id="5" name="LeakyReLU_2329" precision="FP32" type="ReLU">
 			<data negative_slope="0.10000000149011612"/>
 			<input>
 				<port id="0">
@@ -156,7 +156,7 @@
 				<biases offset="94080" size="256"/>
 			</blobs>
 		</layer>
-		<layer id="8" name="LeakyReLU_2326" precision="FP32" type="ReLU">
+		<layer id="8" name="LeakyReLU_" precision="FP32" type="ReLU">
 			<data negative_slope="0.10000000149011612"/>
 			<input>
 				<port id="0">
@@ -217,7 +217,7 @@
 				<biases offset="389248" size="512"/>
 			</blobs>
 		</layer>
-		<layer id="11" name="LeakyReLU_2324" precision="FP32" type="ReLU">
+		<layer id="11" name="LeakyReLU_2331" precision="FP32" type="ReLU">
 			<data negative_slope="0.10000000149011612"/>
 			<input>
 				<port id="0">
@@ -278,7 +278,7 @@
 				<biases offset="1569408" size="1024"/>
 			</blobs>
 		</layer>
-		<layer id="14" name="LeakyReLU_2330" precision="FP32" type="ReLU">
+		<layer id="14" name="LeakyReLU_2332" precision="FP32" type="ReLU">
 			<data negative_slope="0.10000000149011612"/>
 			<input>
 				<port id="0">
@@ -339,7 +339,7 @@
 				<biases offset="6289024" size="2048"/>
 			</blobs>
 		</layer>
-		<layer id="17" name="LeakyReLU_2331" precision="FP32" type="ReLU">
+		<layer id="17" name="LeakyReLU_2324" precision="FP32" type="ReLU">
 			<data negative_slope="0.10000000149011612"/>
 			<input>
 				<port id="0">
@@ -400,7 +400,7 @@
 				<biases offset="25165440" size="4096"/>
 			</blobs>
 		</layer>
-		<layer id="20" name="LeakyReLU_2325" precision="FP32" type="ReLU">
+		<layer id="20" name="LeakyReLU_2327" precision="FP32" type="ReLU">
 			<data negative_slope="0.10000000149011612"/>
 			<input>
 				<port id="0">
@@ -442,7 +442,7 @@
 				<biases offset="26218112" size="1024"/>
 			</blobs>
 		</layer>
-		<layer id="22" name="LeakyReLU_2328" precision="FP32" type="ReLU">
+		<layer id="22" name="LeakyReLU_2326" precision="FP32" type="ReLU">
 			<data negative_slope="0.10000000149011612"/>
 			<input>
 				<port id="0">
@@ -484,7 +484,7 @@
 				<biases offset="26350208" size="512"/>
 			</blobs>
 		</layer>
-		<layer id="24" name="LeakyReLU_2329" precision="FP32" type="ReLU">
+		<layer id="24" name="LeakyReLU_2323" precision="FP32" type="ReLU">
 			<data negative_slope="0.10000000149011612"/>
 			<input>
 				<port id="0">
@@ -570,7 +570,7 @@
 				<biases offset="29889664" size="1024"/>
 			</blobs>
 		</layer>
-		<layer id="28" name="LeakyReLU_2323" precision="FP32" type="ReLU">
+		<layer id="28" name="LeakyReLU_2328" precision="FP32" type="ReLU">
 			<data negative_slope="0.10000000149011612"/>
 			<input>
 				<port id="0">
@@ -590,7 +590,7 @@
 			</output>
 		</layer>
 		<layer id="29" name="detector/yolo-v3-tiny/Conv_12/Conv2D" precision="FP32" type="Convolution">
-			<data auto_pad="same_upper" dilations="1,1" group="1" kernel="1,1" output="36" pads_begin="0,0" pads_end="0,0" strides="1,1"/>
+			<data auto_pad="same_upper" dilations="1,1" group="1" kernel="1,1" output="45" pads_begin="0,0" pads_end="0,0" strides="1,1"/>
 			<input>
 				<port id="0">
 					<dim>1</dim>
@@ -602,22 +602,22 @@
 			<output>
 				<port id="3">
 					<dim>1</dim>
-					<dim>36</dim>
+					<dim>45</dim>
 					<dim>26</dim>
 					<dim>26</dim>
 				</port>
 			</output>
 			<blobs>
-				<weights offset="29890688" size="36864"/>
-				<biases offset="29927552" size="144"/>
+				<weights offset="29890688" size="46080"/>
+				<biases offset="29936768" size="180"/>
 			</blobs>
 		</layer>
 		<layer id="30" name="detector/yolo-v3-tiny/Conv_12/BiasAdd/YoloRegion" precision="FP32" type="RegionYolo">
-			<data anchors="10,14,23,27,37,58,81,82,135,169,344,319" axis="1" classes="7" coords="4" do_softmax="0" end_axis="3" mask="0,1,2" num="3"/>
+			<data anchors="7,13,10,19,14,24,16,31,16,52,22,40,27,54,41,57,74,75" axis="1" classes="10" coords="4" do_softmax="0" end_axis="3" mask="0,1,2" num="3"/>
 			<input>
 				<port id="0">
 					<dim>1</dim>
-					<dim>36</dim>
+					<dim>45</dim>
 					<dim>26</dim>
 					<dim>26</dim>
 				</port>
@@ -625,7 +625,7 @@
 			<output>
 				<port id="1">
 					<dim>1</dim>
-					<dim>36</dim>
+					<dim>45</dim>
 					<dim>26</dim>
 					<dim>26</dim>
 				</port>
@@ -650,11 +650,11 @@
 				</port>
 			</output>
 			<blobs>
-				<weights offset="29927696" size="4718592"/>
-				<biases offset="34646288" size="2048"/>
+				<weights offset="29936948" size="4718592"/>
+				<biases offset="34655540" size="2048"/>
 			</blobs>
 		</layer>
-		<layer id="32" name="LeakyReLU_" precision="FP32" type="ReLU">
+		<layer id="32" name="LeakyReLU_2325" precision="FP32" type="ReLU">
 			<data negative_slope="0.10000000149011612"/>
 			<input>
 				<port id="0">
@@ -674,7 +674,7 @@
 			</output>
 		</layer>
 		<layer id="33" name="detector/yolo-v3-tiny/Conv_9/Conv2D" precision="FP32" type="Convolution">
-			<data auto_pad="same_upper" dilations="1,1" group="1" kernel="1,1" output="36" pads_begin="0,0" pads_end="0,0" strides="1,1"/>
+			<data auto_pad="same_upper" dilations="1,1" group="1" kernel="1,1" output="45" pads_begin="0,0" pads_end="0,0" strides="1,1"/>
 			<input>
 				<port id="0">
 					<dim>1</dim>
@@ -686,22 +686,22 @@
 			<output>
 				<port id="3">
 					<dim>1</dim>
-					<dim>36</dim>
+					<dim>45</dim>
 					<dim>13</dim>
 					<dim>13</dim>
 				</port>
 			</output>
 			<blobs>
-				<weights offset="34648336" size="73728"/>
-				<biases offset="34722064" size="144"/>
+				<weights offset="34657588" size="92160"/>
+				<biases offset="34749748" size="180"/>
 			</blobs>
 		</layer>
 		<layer id="34" name="detector/yolo-v3-tiny/Conv_9/BiasAdd/YoloRegion" precision="FP32" type="RegionYolo">
-			<data anchors="10,14,23,27,37,58,81,82,135,169,344,319" axis="1" classes="7" coords="4" do_softmax="0" end_axis="3" mask="0,1,2" num="3"/>
+			<data anchors="7,13,10,19,14,24,16,31,16,52,22,40,27,54,41,57,74,75" axis="1" classes="10" coords="4" do_softmax="0" end_axis="3" mask="0,1,2" num="3"/>
 			<input>
 				<port id="0">
 					<dim>1</dim>
-					<dim>36</dim>
+					<dim>45</dim>
 					<dim>13</dim>
 					<dim>13</dim>
 				</port>
@@ -709,7 +709,7 @@
 			<output>
 				<port id="1">
 					<dim>1</dim>
-					<dim>36</dim>
+					<dim>45</dim>
 					<dim>13</dim>
 					<dim>13</dim>
 				</port>
@@ -765,7 +765,7 @@
 			<extensions value="DIR"/>
 			<framework value="tf"/>
 			<generate_deprecated_IR_V2 value="False"/>
-			<input_model value="DIR/frozen_darknet_yolov3_tiny_model_CPU.pb"/>
+			<input_model value="DIR/frozen_darknet_yolov3_model.pb"/>
 			<input_model_is_text value="False"/>
 			<input_shape value="[1,416,416,3]"/>
 			<keep_shape_ops value="False"/>
