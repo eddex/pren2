@@ -1,5 +1,6 @@
 import base64
 import logging
+import os
 import queue
 import sys
 import threading
@@ -9,6 +10,7 @@ from time import sleep, time
 
 import cv2
 import numpy as np
+import pygame
 import serial
 import socketio
 
@@ -39,6 +41,19 @@ class MCFSMStates(Enum):
     HALTESIGNAL_STOPPEN = 10
     STOP = 11
 
+class SoundOutputs(Enum):
+    ZERO = 0
+    ONE = 1
+    TWO = 2
+    THREE = 3
+    FOUR = 4
+    FIVE = 5
+    SIX = 6
+    SEVEN = 7
+    EIGHT = 8
+    NINE = 9
+    INIT_TMS = 101
+
 
 class TrainManagementSystemStates(Enum):
     pass
@@ -53,6 +68,8 @@ class TrainManagementSystem(FSMStateStatusListenerInterface):
         self._log = None
         self._serial = None
         self._socketio = None
+        self._sound_player = None
+        self._play = None
         self.ticp_handler = None
         self._image_amalyzer = ImageAnalyzer()
         self._image_amalyzer.initialize()
@@ -88,7 +105,6 @@ class TrainManagementSystem(FSMStateStatusListenerInterface):
 
         while self.running or self._current_mcu_fsm != MCFSMStates.STOP:
             pass
-
 
     def _initialize(self):
         self.log.info("Train Inizialized")
@@ -254,6 +270,38 @@ class TrainManagementSystem(FSMStateStatusListenerInterface):
         web_logger.setFormatter(formatter)
 
         self.log.addHandler(web_logger)
+
+    def _init_sound(self):
+        self.log.info("Start Initialize Sound Module")
+
+        self._sound_player = pygame.mixer
+        self._sound_player.init()
+        self._sound_playermusic.set_volume(1.0)
+        self._sound_playerset_reserved(1)
+
+        self.log.info("Setting PCM to :" + self.config.PCM_SETTING)
+        os.system('amixer set PCM ' + self.config.PCM_SETTING)
+
+        if self.config.HUMAN_OUTPUT_ENABLE:
+            self._play = self._playHumanVoice
+        else:
+            self._play = self._playBeepSound
+
+        self.log.info("Sound Module initialized")
+
+    def _playHumanVoice(self, sound: SoundOutputs):
+
+        filepath = BaseConfig.HUMAN_SOUNDFILE_BASEPATH + BaseConfig.HUMAN_SOUNDFILE_PATHS.get(
+            sound.soundId)
+        self._sound_player.music.load(filepath)
+        self._sound_player.music.play(1)
+
+    def _playBeepSound(self, sound: SoundOutputs):
+
+        filepath = BaseConfig.BEEP_SOUNDFILE_BASEPATH + BaseConfig.BEEP_SOUNDFILE_PATH
+        self._sound_player.music.load(filepath)
+        if 1 <= sound.soundId <= 9:
+            self._sound_player.music.play(sound.soundId - 1)
 
 
 if __name__ == "__main__":

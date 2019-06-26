@@ -25,6 +25,28 @@ DEBUG = 10
 NOTSET = 0
 
 
+class SoundConfig:
+
+    HUMAN_OUTPUT_ENABLE = True
+    HUMAN_SOUNDFILE_BASEPATH = './soundfiles/'
+    HUMAN_SOUNDFILE_PATHS = {
+        0: '0.mp3',
+        1: '1.mp3',
+        2: '2.mp3',
+        3: '3.mp3',
+        4: '4.mp3',
+        5: '5.mp3',
+        6: '6.mp3',
+        7: '7.mp3',
+        8: '8.mp3',
+        9: '9.mp3'
+    }
+
+    BEEP_SOUNDFILE_BASEPATH = './soundfiles/'
+    BEEP_SOUNDFILE_PATH = 'beep-08b.mp3'
+
+    PCM_SETTING = '100%'
+
 class BaseImageAnalysisCPUConfig:
     DEVICE = 'CPU'
     MODEL_NAME = 'frozen_darknet_yolov3_tiny_model_signals_CPU'
@@ -55,7 +77,7 @@ class BaseUARTConfig:
         SERIAL_PARITY = serial.PARITY_NONE
 
 
-class BaseConfig(BaseCameraConfig, BaseUARTConfig):
+class BaseConfig(BaseCameraConfig, BaseUARTConfig, SoundConfig):
 
     APP_NAME = 'TrainManagementSystem'
     APP_IMPORT_PATH = './'
