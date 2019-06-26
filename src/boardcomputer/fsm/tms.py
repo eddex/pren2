@@ -130,6 +130,7 @@ class TrainManagementSystem(FSMStateStatusListenerInterface):
                 self.log.info(
                     "Info Signal with number {} was deteced and logged".format(signal.number))
                 self.info_signals.append(signal)
+                self._play(SoundOutputs(signal.number))
 
             elif signal.signal_type is SignalType.STOP:
                 self.log.info("Stop Signal with number {} was deteced".format(signal.number))
