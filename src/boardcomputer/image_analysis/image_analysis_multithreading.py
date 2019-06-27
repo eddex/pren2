@@ -265,24 +265,18 @@ class ImageAnalyzer:
 
 
     def prepare_image_for_processing(self, color_image):
-        # resized_image = color_image
-        # resized_image = cv2.resize(color_image, (self.new_w, self.new_h), interpolation = cv2.INTER_CUBIC)
 
-        # resize image to shape 416x416 by cutting off the edges
-        # the images should already be 416x416 from the PiCamera.
-        resized_image = []
-        for row in color_image[:416]:
-            resized_image.append(row[:416])
+        # EXPECTATION: the images should already be 416x416 from the PiCamera.
 
         # create all black 416x416 image
         canvas = np.full((self.m_input_size, self.m_input_size, 3), 0)
         
         if self.search_high_signals:
             # searching for info and start signals in upper half of the image
-            canvas[:208, :416, :] = resized_image
+            canvas[:208, :416, :] = color_image[:208, :416]
         else:
             # stop signals are in the lower half of the image
-            canvas[208:416, :416, :] = resized_image
+            canvas[208:416, :416, :] = color_image[208:416, :416, :]
 
         prepimg = canvas
         prepimg = prepimg[np.newaxis, :, :, :]     # Batch size axis add
