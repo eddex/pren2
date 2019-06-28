@@ -29,6 +29,7 @@ yolo_scale_52 = 52
 classes = 7
 coords = 4
 num = 3
+anchors = [7, 13,  10, 19,  14, 24,  16, 31,  16, 52,  22, 40,  27, 54,  41, 57,  74, 75]
 
 LABELS = (
     "signal-1",
@@ -78,6 +79,45 @@ def entry_index(side, l_coords, l_classes, location, entry):
     n = int(location / (side * side))
     loc = location % (side * side)
     return int(n * side * side * (l_coords + l_classes + 1) + entry * side * side + loc)
+
+
+def parse_yolov3_output(blob, threshold):
+
+        objects = []
+        out_blob_h = blob.shape[2]
+
+        side = out_blob_h
+        anchor_offset = 0
+
+        if side == yolo_scale_13:
+            anchor_offset = 2 * 3
+        elif side == yolo_scale_26:
+            anchor_offset = 2 * 0        
+
+        side_square = side * side
+        output_blob = blob.flatten()
+
+        for i in range(side_square):
+            row = int(i / side)
+            col = int(i % side)
+            for n in range(num):
+                obj_index = entry_index(side, coords, classes, n * side * side + i, coords)
+                box_index = entry_index(side, coords, classes, n * side * side + i, 0)
+                scale = output_blob[obj_index]
+                if (scale < threshold):
+                    continue
+                x = (col + output_blob[box_index + 0 * side_square]) / side * 416
+                y = (row + output_blob[box_index + 1 * side_square]) / side * 416
+                height = math.exp(output_blob[box_index + 3 * side_square]) * anchors[anchor_offset + 2 * n + 1]
+                width = math.exp(output_blob[box_index + 2 * side_square]) * anchors[anchor_offset + 2 * n]
+                for j in range(classes):
+                    class_index = entry_index(side, coords, classes, n * side_square + i, coords + 1 + j)
+                    prob = scale * output_blob[class_index]
+                    if prob < threshold:
+                        continue
+                    obj = DetectionObject(x, y, height, width, j, prob, 1, 1)
+                    objects.append(obj)
+        return objects
 
 
 def parse_yolov3_output_classes_only(blob, threshold):
@@ -182,14 +222,14 @@ class NcsWorker(object):
 
 
     def intersection_over_union(self, box_1, box_2):
-        width_of_overlap_area = min(box_1.xmax, box_2.xmax) - max(box_1.xmin, box_2.xmin)
-        height_of_overlap_area = min(box_1.ymax, box_2.ymax) - max(box_1.ymin, box_2.ymin)
+        width_of_overlap_area = min(box_1.x_max, box_2.x_max) - max(box_1.x_min, box_2.x_min)
+        height_of_overlap_area = min(box_1.y_max, box_2.y_max) - max(box_1.y_min, box_2.y_min)
         if width_of_overlap_area < 0.0 or height_of_overlap_area < 0.0:
             area_of_overlap = 0.0
         else:
             area_of_overlap = width_of_overlap_area * height_of_overlap_area
-        box_1_area = (box_1.ymax - box_1.ymin) * (box_1.xmax - box_1.xmin)
-        box_2_area = (box_2.ymax - box_2.ymin) * (box_2.xmax - box_2.xmin)
+        box_1_area = (box_1.y_max - box_1.y_min) * (box_1.x_max - box_1.x_min)
+        box_2_area = (box_2.y_max - box_2.y_min) * (box_2.x_max - box_2.x_min)
         area_of_union = box_1_area + box_2_area - area_of_overlap
 
         if area_of_union <= 0.0:
@@ -232,7 +272,7 @@ class NcsWorker(object):
                 objects = []
                 outputs = self.exec_net.requests[dev].outputs
                 for output in outputs.values():
-                    objects = parse_yolov3_output_classes_only(output, self.threshold)
+                    objects = parse_yolov3_output(output, self.threshold)
 
                 objlen = len(objects)
                 for i in range(objlen):
@@ -396,13 +436,13 @@ class ImageAnalyzer:
                         for r in result_set:
                             if r.confidence > best_result.confidence:
                                 best_result = r
-                        print('class: {}'.format(best_result.class_id))
+                        print('class: {}, confidence {}'.format(best_result.class_id, best_result.confidence))
+                        print('{:04f}, FPS: {}'.format(time.time() - t, 1/(time.time() - t)))
+                        t = time.time()
                         if (self.search_high_signals):
-                             return LABELS_TMS_INFO[r[0].class_id]
+                             return LABELS_TMS_INFO[best_result.class_id]
                         else:
-                             return LABELS_TMS_STOP[r[0].class_id]
-                    print('{:04f}, FPS: {}'.format(time.time() - t, 1/(time.time() - t)))
-                    t = time.time()
+                             return LABELS_TMS_STOP[best_result.class_id]
             except KeyboardInterrupt:
                 self.running = False
                 sys.exit(0)
