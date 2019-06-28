@@ -81,7 +81,8 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define SlowVelo 200 // langsame Geschwindigkeit [mm/s]
+#define SlowVeloWurfel 100 // langsame Geschwindigkeit für Würfelaufnahme [mm/s]
+#define SlowVeloHaltesignal 150 // langsame Geschwindigkeit für Haltesignal [mm/s]
 #define MaxVelo 3000 // maximale Geschwindigkeit [mm/s]
 #define MaxNbrSignals 10 // maximale Anzahl Signale auf der Strecke
 #define MaxNbrRounds 2 // maximale Anzahl Runden
@@ -89,6 +90,7 @@
 #define MaxTrackLength 25000 // maximale Streckenlänge [mm]
 #define OffsetStartpos 1000 // Offset beim Retourfahren zur Startposition zur Verhinderung überfahren der Startposition [Ticks]
 #define OffsetHaltesignal 80 // Offset Halten beim Haltesignal [mm]
+#define OffsetWurfel 15 // Offset Vorfahren beim Würfel [mm]
 
 //fsm State wurde von Default Task hierher verschoben, damit im sendDataToRaspy Task darauf zugegriffen werden kann
 enum fsm fsm_state; // create enum for statemachine task
@@ -252,6 +254,7 @@ void FSM_Task(void const * argument)
 	uint8_t wurfelCtr = 0; // Zähler Anzahl Ladeversuche
 
 	int32_t posStart = 0;	// Positionsmerker bei Startsignal
+	int32_t posWurfel = 0;	// Positionsmerker bei Würfel erkannt
 	int32_t posHaltesignal = 0; // Positionsmerker Haltesignal erkannt
 	int32_t distHaltesignal = 0; // Distanz zum Haltesignal
 
@@ -285,6 +288,8 @@ void FSM_Task(void const * argument)
 				HAL_GPIO_WritePin(HB_Sleep_GPIO_Port, HB_Sleep_Pin, GPIO_PIN_SET);
 				posStart=Quad_V_GetPos();
 				startTimeMeasurment();			//Zeitmessung beginnen für Abbruchkriterium des Tasks
+
+				HAL_GPIO_WritePin(LED_Heartbeat_GPIO_Port, LED_Heartbeat_Pin, GPIO_PIN_RESET);
 				fsm_state = WURFEL_ERKENNEN;
 			}
 
@@ -299,25 +304,42 @@ void FSM_Task(void const * argument)
 			//Enable H-Bridge Module of Motor1 and Motor2
 			HAL_GPIO_WritePin(HB_Sleep_GPIO_Port, HB_Sleep_Pin, GPIO_PIN_SET);
 			startTimeMeasurment();					//Zeitmessung beginnen für Abbruchkriterium des Tasks
+
+			HAL_GPIO_WritePin(LED_Heartbeat_GPIO_Port, LED_Heartbeat_Pin, GPIO_PIN_RESET);
 			fsm_state = WURFEL_ERKENNEN;
 			#endif
 			break;
 
 		// Warten bis Würfel erkennt wird
 		case WURFEL_ERKENNEN:
-			PID_V_Velo(SlowVelo); //Mit langsamer Geschwindigkeit fahren
-			PID_H_Velo(SlowVelo);
+			PID_V_Velo(SlowVeloWurfel); //Mit langsamer Geschwindigkeit fahren
+			PID_H_Velo(SlowVeloWurfel);
 
 			taskState = tof_erkennen(130); //Versuche den Wüfel in einer Distanz bis zu 13cm zu erkennen
 
 			if(taskState == TASK_OK){
-				fsm_state = SERVO_RUNTER;
+				HAL_GPIO_WritePin(LED_Heartbeat_GPIO_Port, LED_Heartbeat_Pin, GPIO_PIN_SET);
+				//fsm_state = SERVO_RUNTER;
+				posWurfel=Quad_V_GetPos() + ((OffsetWurfel * iGetriebe * TicksPerRev) / (Wirkumfang)); // Umrechnung Millimeter in Ticks
+				fsm_state = WURFEL_VORFAHREN;
 			}
 			else if(taskState == TASK_TIME_OVERFLOW){ // Würfel nicht erkannt
 				fsm_state = STARTPOSITION;
 			}
 			else{}
 
+			break;
+
+		// Vorfahren bis zur Würfelmitte
+		case WURFEL_VORFAHREN:
+			PID_V_Velo(SlowVeloWurfel); //Mit langsamer Geschwindigkeit fahren
+			PID_H_Velo(SlowVeloWurfel);
+
+			if (Quad_V_GetPos()>=posWurfel){
+				Motor_V_Break();
+				Motor_H_Break();
+				fsm_state = SERVO_RUNTER;
+			}
 			break;
 
 		// Lademechanismus nach unten fahren
@@ -374,10 +396,8 @@ void FSM_Task(void const * argument)
 
 		// Startposition anfahren -> Anlauf holen
 		case STARTPOSITION:
-
-
-			PID_V_Velo(-SlowVelo); // Mit langsamer Geschwindigkeit an die ursprüngliche Position zurück fahren
-			PID_H_Velo(-SlowVelo);
+			PID_V_Velo(-SlowVeloWurfel); // Mit langsamer Geschwindigkeit an die ursprüngliche Position zurück fahren
+			PID_H_Velo(-SlowVeloWurfel);
 
 			//Wenn die ursprüngliche Position beim zurückfahren erreicht wurde
 			if ((Quad_V_GetPos()<(posStart+OffsetStartpos) && taskState==TASK_OK)||(Quad_V_GetPos()<(posStart+OffsetStartpos) && tryAgain ==1)){	//Konnte der Wüfel nach max. 3 Versuchen geladen werden?
@@ -396,12 +416,6 @@ void FSM_Task(void const * argument)
 				startTimeMeasurment();
 				fsm_state = WURFEL_ERKENNEN;
 			}
-
-
-
-			/*if (PID_InPos()){
-				fsm_state = SCHNELLFAHRT;
-			}*/
 			break;
 
 		// Schnellfahrt (Beschleunigen und Abbruchkriterien checken)
@@ -431,7 +445,7 @@ void FSM_Task(void const * argument)
 		// Abbremsen zur Haltesignalerkennung
 		case BREMSEN:
 			speed-=10;
-			if (speed <= SlowVelo){
+			if (speed <= SlowVeloHaltesignal){
 				fsm_state = FINALES_HALTESIGNAL;
 			}
 			PID_V_Velo(speed);
@@ -440,8 +454,8 @@ void FSM_Task(void const * argument)
 
 		// Warten auf Signal finales Haltesignal erkannt von Raspi
 		case FINALES_HALTESIGNAL:
-			PID_V_Velo(SlowVelo);
-			PID_H_Velo(SlowVelo);
+			PID_V_Velo(SlowVeloHaltesignal);
+			PID_H_Velo(SlowVeloHaltesignal);
 			//Annahme, dass finales Haltesignal nie erkannt wird --> Bsp. Signal Counter bleit konstant...
 			//Abbruchbedingung für Schwenken der weissen Flagge definieren...
 			//ToDo
@@ -472,8 +486,8 @@ void FSM_Task(void const * argument)
 
 		// Haltesignal mit TOF erkennen
 		case HALTESIGNAL_ANFAHREN:
-			PID_V_Velo(SlowVelo);
-			PID_H_Velo(SlowVelo);
+			PID_V_Velo(SlowVeloHaltesignal);
+			PID_H_Velo(SlowVeloHaltesignal);
 			taskState=tof_erkennen(100);
 
 			if(taskState==TASK_OK){
@@ -506,8 +520,8 @@ void FSM_Task(void const * argument)
 
 		// Positionregelung vor Haltesignal
 		case HALTESIGNAL_STOPPEN:
-			PID_V_Velo(SlowVelo);
-			PID_H_Velo(SlowVelo);
+			PID_V_Velo(SlowVeloHaltesignal);
+			PID_H_Velo(SlowVeloHaltesignal);
 			if (Quad_V_GetPos()>=posHaltesignal){
 				Motor_V_Break();
 				Motor_H_Break();
@@ -559,12 +573,12 @@ void TOF_Task(void const * argument)
 		#if SensorTaskEnable
 		if(suspendSensorTask==0){
 			if(measureDistanceValue()==TASK_OK){}
-			osDelay(100);
+			osDelay(10);
 		}
 
 		else{
 			//Error Handling ist still ToDo
-			osDelay(100);
+			osDelay(10);
 		}
 		#else
 			osDelay(9000);
@@ -738,7 +752,7 @@ void UART_Task(void const * argument)
 			UartSendBuffer[8] = 0;
 		#endif
 
-		HAL_UART_Transmit(&huart1, UartSendBuffer, 1, 1000);
+		//HAL_UART_Transmit(&huart1, UartSendBuffer, 1, 1000);
 
 		//*********Virtual Comport UART Debug**************
 		HAL_UART_Transmit(&huart2, UartSendBuffer, 1, 1000);
