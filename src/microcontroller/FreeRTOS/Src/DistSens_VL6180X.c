@@ -115,7 +115,7 @@ taskState_t VL6180X_Init(void){
 	if(HAL_I2C_Mem_Write(&hi2c1, VL6180X_DevAddress, 0x0040,2, dataBuffer, 1, 100)==HAL_OK);else{distTaskState = TASK_ERROR;};
 	dataBuffer[0] = 0x01;
 	if(HAL_I2C_Mem_Write(&hi2c1, VL6180X_DevAddress, 0x002e,2, dataBuffer, 1, 100)==HAL_OK);else{distTaskState = TASK_ERROR;};
-	dataBuffer[0] = 0x09;
+	dataBuffer[0] = 0x03;
 	if(HAL_I2C_Mem_Write(&hi2c1, VL6180X_DevAddress, 0x001b,2, dataBuffer, 1, 100)==HAL_OK);else{distTaskState = TASK_ERROR;};
 	dataBuffer[0] = 0x31;
 	if(HAL_I2C_Mem_Write(&hi2c1, VL6180X_DevAddress, 0x003e,2, dataBuffer, 1, 100)==HAL_OK);else{distTaskState = TASK_ERROR;};
