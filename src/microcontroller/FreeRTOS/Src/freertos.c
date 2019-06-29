@@ -254,6 +254,7 @@ void FSM_Task(void const * argument)
 	uint8_t wurfelCtr = 0; // Zähler Anzahl Ladeversuche
 
 	int32_t posStart = 0;	// Positionsmerker bei Startsignal
+	int32_t posFinalesHaltesignal = 0; // Positionsmerker bei warten auf finales Haltesignal
 	int32_t posWurfel = 0;	// Positionsmerker bei Würfel erkannt
 	int32_t posHaltesignal = 0; // Positionsmerker Haltesignal erkannt
 	int32_t distHaltesignal = 0; // Distanz zum Haltesignal
@@ -446,6 +447,7 @@ void FSM_Task(void const * argument)
 		case BREMSEN:
 			speed-=10;
 			if (speed <= SlowVeloHaltesignal){
+				posFinalesHaltesignal = Quad_V_GetPos(); // Position merken
 				fsm_state = FINALES_HALTESIGNAL;
 			}
 			PID_V_Velo(speed);
@@ -469,7 +471,17 @@ void FSM_Task(void const * argument)
 				fsm_state = HALTESIGNAL_ANFAHREN;
 				PID_V_ClearError();
 				PID_H_ClearError();
-
+			}
+			// falls eine ganze Strecke abgefahren wurde und kein Haltesignal von Raspberry erhalten wurde
+			else if	((Quad_V_GetPos()-posFinalesHaltesignal)>=(((MaxTrackLength/2) * iGetriebe * TicksPerRev) / (Wirkumfang))){
+				HAL_GPIO_WritePin(GPIOF, SHDN_TOF_TAFEL_Pin, GPIO_PIN_SET); // Tof Tafel enable
+				resetDistanceValue(); // Reset Distance Value for next measurement
+				VL6180X_Init();
+				suspendSensorTask=0; //Enable Sensor Task
+				startTimeMeasurment();
+				fsm_state = HALTESIGNAL_ANFAHREN;
+				PID_V_ClearError();
+				PID_H_ClearError();
 			}
 
 			#if WuerfelerkenneUndLaden_TEST
