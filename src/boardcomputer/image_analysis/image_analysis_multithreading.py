@@ -1,21 +1,25 @@
-#import sys
-#[sys.path.append(i) for i in ['.', '..']]
+import sys
+[sys.path.append(i) for i in ['.', '..']]
 
-from fsm.signals import Signal
-import os, sys, heapq
+import os
+import heapq
 import cv2
 import time
-import numpy as np, math
+import numpy as np
 import logging
 import multiprocessing as mp
-import threading
 from fsm.config import BaseConfig
+from fsm.signals import Signal
 
 try:
     # Raspberry
     sys.path.insert(0, '/opt/intel/openvino/python/python3.5')
     from armv7l.openvino.inference_engine import IENetwork, IEPlugin
-    from picamera import PiCamera
+    try:
+        from picamera import PiCamera
+    except:
+        # no PyCamera, such a shame. Use fake_cam_thread()
+        pass
     from fsm.config import BaseImageAnalysisNCS2Config as config
 except:
     # Dev PC
@@ -26,10 +30,10 @@ yolo_scale_13 = 13
 yolo_scale_26 = 26
 yolo_scale_52 = 52
 
-classes = 7
+classes = 10
 coords = 4
 num = 3
-anchors = [7, 13,  10, 19,  14, 24,  16, 31,  16, 52,  22, 40,  27, 54,  41, 57,  74, 75]
+anchors = [10, 14, 23, 27, 37, 58, 81, 82, 135, 169, 344, 319]
 
 LABELS = (
     "signal-1",
@@ -81,45 +85,6 @@ def entry_index(side, l_coords, l_classes, location, entry):
     return int(n * side * side * (l_coords + l_classes + 1) + entry * side * side + loc)
 
 
-def parse_yolov3_output(blob, threshold):
-
-        objects = []
-        out_blob_h = blob.shape[2]
-
-        side = out_blob_h
-        anchor_offset = 0
-
-        if side == yolo_scale_13:
-            anchor_offset = 2 * 3
-        elif side == yolo_scale_26:
-            anchor_offset = 2 * 0        
-
-        side_square = side * side
-        output_blob = blob.flatten()
-
-        for i in range(side_square):
-            row = int(i / side)
-            col = int(i % side)
-            for n in range(num):
-                obj_index = entry_index(side, coords, classes, n * side * side + i, coords)
-                box_index = entry_index(side, coords, classes, n * side * side + i, 0)
-                scale = output_blob[obj_index]
-                if (scale < threshold):
-                    continue
-                x = (col + output_blob[box_index + 0 * side_square]) / side * 416
-                y = (row + output_blob[box_index + 1 * side_square]) / side * 416
-                height = math.exp(output_blob[box_index + 3 * side_square]) * anchors[anchor_offset + 2 * n + 1]
-                width = math.exp(output_blob[box_index + 2 * side_square]) * anchors[anchor_offset + 2 * n]
-                for j in range(classes):
-                    class_index = entry_index(side, coords, classes, n * side_square + i, coords + 1 + j)
-                    prob = scale * output_blob[class_index]
-                    if prob < threshold:
-                        continue
-                    obj = DetectionObject(x, y, height, width, j, prob, 1, 1)
-                    objects.append(obj)
-        return objects
-
-
 def parse_yolov3_output_classes_only(blob, threshold):
     """
     Args:
@@ -152,17 +117,6 @@ def parse_yolov3_output_classes_only(blob, threshold):
     return objects
 
 
-class DetectionObject:
-
-    def __init__(self, x, y, h, w, class_id, confidence, h_scale, w_scale):
-        self.x_min = int((x - w / 2) * w_scale)
-        self.y_min = int((y - h / 2) * h_scale)
-        self.x_max = int(self.x_min + w * w_scale)
-        self.y_max = int(self.y_min + h * h_scale)
-        self.class_id = class_id
-        self.confidence = confidence
-
-
 class DetectionObjectFaster:
 
     def __init__(self, class_id, confidence):
@@ -172,12 +126,13 @@ class DetectionObjectFaster:
 
 class NcsWorker(object):
 
-    def __init__(self, frame_buffer, results, video_fps):
-        self.frameBuffer = frame_buffer
+
+    def __init__(self, image_queue, results):
+        self.image_queue = image_queue
         self.model_xml = "image_analysis/model/{}.xml".format(config.MODEL_NAME)
         self.model_bin = "image_analysis/model/{}.bin".format(config.MODEL_NAME)
         self.threshold = 0.4
-        self.num_requests = 4
+        self.num_requests = 2
         self.inferred_request = [0] * self.num_requests
         self.heap_request = []
         self.inferred_cnt = 0
@@ -186,12 +141,6 @@ class NcsWorker(object):
         self.input_blob = next(iter(self.net.inputs))
         self.exec_net = self.plugin.load(network=self.net, num_requests=self.num_requests)
         self.results = results
-        self.predict_async_time = 800
-        self.skip_frame = 0
-        self.roop_frame = 0
-        self.video_fps = video_fps
-        self.new_w = 416
-        self.new_h = 416
         
 
     def get_index_of_item_in_list(self, l, x, not_found_value=-1):
@@ -211,48 +160,30 @@ class NcsWorker(object):
             return not_found_value
 
 
-    def skip_frame_measurement(self):
-        surplustime_per_second = (1000 - self.predict_async_time)
-        if surplustime_per_second > 0.0:
-            frame_per_millisecond = (1000 / self.video_fps)
-            total_skip_frame = surplustime_per_second / frame_per_millisecond
-            self.skip_frame = int(total_skip_frame / self.num_requests)
-        else:
-            self.skip_frame = 0
+    def predict_synchronous(self):
+        if self.image_queue.empty():
+                return
 
+        print("got image")
+        prepared_image = self.image_queue.get()
+        outputs = self.exec_net.infer(inputs={self.input_blob: prepared_image})
 
-    def intersection_over_union(self, box_1, box_2):
-        width_of_overlap_area = min(box_1.x_max, box_2.x_max) - max(box_1.x_min, box_2.x_min)
-        height_of_overlap_area = min(box_1.y_max, box_2.y_max) - max(box_1.y_min, box_2.y_min)
-        if width_of_overlap_area < 0.0 or height_of_overlap_area < 0.0:
-            area_of_overlap = 0.0
-        else:
-            area_of_overlap = width_of_overlap_area * height_of_overlap_area
-        box_1_area = (box_1.y_max - box_1.y_min) * (box_1.x_max - box_1.x_min)
-        box_2_area = (box_2.y_max - box_2.y_min) * (box_2.x_max - box_2.x_min)
-        area_of_union = box_1_area + box_2_area - area_of_overlap
-
-        if area_of_union <= 0.0:
-            result = 0.0
-        else:
-            result = (area_of_overlap / area_of_union)
-        return result
+        objects = []
+        for output in outputs.values():
+            objects = parse_yolov3_output_classes_only(output, 0.4)
+        
+        if len(objects) > 0:
+            self.results.put(objects)
 
 
     def predict_async(self):
         try:
-            if self.frameBuffer.empty():
+            if self.image_queue.empty():
                 return
 
-            self.roop_frame += 1
-            if self.roop_frame <= self.skip_frame:
-                self.frameBuffer.get()
-                return
-            self.roop_frame = 0
-
-            prepared_image = self.frameBuffer.get()
+            print("got image")
+            prepared_image = self.image_queue.get()
             reqnum = self.get_index_of_item_in_list(self.inferred_request, 0)
-
             if reqnum > -1:
                 self.exec_net.start_async(request_id=reqnum, inputs={self.input_blob: prepared_image})
                 self.inferred_request[reqnum] = 1
@@ -271,23 +202,16 @@ class NcsWorker(object):
 
                 objects = []
                 outputs = self.exec_net.requests[dev].outputs
+
                 for output in outputs.values():
-                    objects = parse_yolov3_output(output, self.threshold)
-
-                objlen = len(objects)
-                for i in range(objlen):
-                    if objects[i].confidence == 0.0:
-                        continue
-                    for j in range(i + 1, objlen):
-                        if self.intersection_over_union(objects[i], objects[j]) >= 0.4:
-                            if objects[i].confidence < objects[j].confidence:
-                                objects[i], objects[j] = objects[j], objects[i]
-                            objects[j].confidence = 0.0
-
-                self.results.put(objects)
+                    objects = parse_yolov3_output_classes_only(output, self.threshold)
+                
+                if len(objects) > 0:
+                    self.results.put(objects)
                 self.inferred_request[dev] = 0
             else:
-                heapq.heappush(self.heap_request, (cnt, dev))
+                print("device {} not ready".format(dev))
+                heapq.heappush(self.heap_request, (cnt, dev))    
         except:
             import traceback
             traceback.print_exc()
@@ -299,17 +223,21 @@ class ImageAnalyzer:
     def __init__(self):
 
         self.running = True  # set to False to stop all processes
-        self.search_high_signals = True # set to false to search for low signals
-        self.m_input_size = 416
+        self.search_high_signals = True  # set to false to search for low signals
+        self.input_size = 416
         self.results = mp.Queue()
 
 
     def prepare_image_for_processing(self, color_image):
-
+        """
+        Cut off the lower or higher part of the image, depoending on if we
+            search for high or low signals.
+        Also transforms the image into the correct format for the NCS2.
+        """
         # EXPECTATION: the images should already be 416x416 from the PiCamera.
 
-        # create all black 416x416 image
-        canvas = np.full((self.m_input_size, self.m_input_size, 3), 0)
+        # create all green 416x416 image
+        canvas = np.full((self.input_size, self.input_size, 3), [0,255,0])
         
         if self.search_high_signals:
             # searching for info and start signals in upper half of the image
@@ -322,31 +250,79 @@ class ImageAnalyzer:
         prepimg = prepimg[np.newaxis, :, :, :]     # Batch size axis add
         prepimg = prepimg.transpose((0, 3, 1, 2))  # NHWC to NCHW
 
+        #cv2.imwrite("lol.jpg", canvas)
+
         return prepimg
 
-    def cam_thread(self, frame_buffer):
+    def prepare_image_for_processing_double_image(self, color_image_1, color_image_2):
         """
-        Args:
-            frame_buffer: the queue for the images.
-            frame_buffer type: Queue[Any]
+        Combines 2 images to one. Like this we can process 2 images at the same time.
+        We only need to look at the top or bottom half of each image, since we only search
+            for high or low signals at the same time.
+        Also transforms the image into the correct format for the NCS2.
         """
+        # EXPECTATION: the images should already be 416x416 from the PiCamera.
 
-        # initialize USB camera
-        '''
-        cam = cv2.VideoCapture(0)
-        if cam.isOpened() != True:
-            print("USB Camera Open Error!!!")
-            self.running = False
-        cam.set(cv2.CAP_PROP_FPS, 15)
-        cam.set(cv2.CAP_PROP_FRAME_WIDTH, 800)
-        cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 640)
-        '''
-        #img = cv2.imread("/home/larry/work/tiny-yolov3-on-intel-neural-compute-stick-2/images/5-1.jpg")
-        #img = cv2.imread("/home/pi/pren2/src/boardcomputer/image_analysis/5-1_416.jpg")
+        # create all black 416x416 image
+        canvas = np.full((self.input_size, self.input_size, 3), 0)
+        
+        if self.search_high_signals:
+            # combine the 2 upper halfs of the image to one image
+            canvas[:208, :416, :] = color_image_1[:208, :416]
+            canvas[208:416, :416, :] = color_image_2[:208, :416]
+        else:
+            # combine the 2 lower halfs of the image to one image
+            canvas[:208, :416, :] = color_image_1[208:416, :416, :]
+            canvas[208:416, :416, :] = color_image_2[208:416, :416, :]
+
+        prepimg = canvas
+        prepimg = prepimg[np.newaxis, :, :, :]     # Batch size axis add
+        prepimg = prepimg.transpose((0, 3, 1, 2))  # NHWC to NCHW
+
+        #cv2.imwrite("double.jpg", canvas)
+
+        return prepimg
+
+
+    def fake_cam_thread(self, image_queue):
+        """
+        Pretends to do the same as the cam_thread() but it's fake!
+        Can be used if no PyCamera is in the reach of the developer.
+        """
+        img = cv2.imread("./image_analysis/signal-5431.jpg")
+        preprocessed_image_1 = self.prepare_image_for_processing(img.copy())
+        
+        img = cv2.imread("./image_analysis/signal-50.jpg")
+        preprocessed_image_2 = self.prepare_image_for_processing(img.copy())
+        
+        img_3 = cv2.imread("./image_analysis/signal-5038.jpg")
+        preprocessed_image_3 = self.prepare_image_for_processing(img_3.copy())
+        
+        img_4 = cv2.imread("./image_analysis/signal-835.jpg")
+        preprocessed_image_4 = self.prepare_image_for_processing(img_4.copy())
+
+        preprocessed_image_double = self.prepare_image_for_processing_double_image(img_3, img_4)
+        
+        while self.running:
+            #image_queue.put(preprocessed_image_1)
+            #image_queue.put(preprocessed_image_2)
+
+            #image_queue.put(preprocessed_image_3)
+            #image_queue.put(preprocessed_image_4)
+
+            image_queue.put(preprocessed_image_double)
+
+
+    def cam_thread(self, image_queue):
+        """
+        Capture images with the PiCamera.
+        Does preprocessing on the images to optimize them for the neural network.
+        Args:
+            image_queue: the queue for the images.
+        """
 
         # initialise PiCamera
         base_config = BaseConfig()
-
         camera = PiCamera()
         camera.resolution = base_config.CAMERA_RESOLUTION
         camera.brightness = base_config.CAMERA_BRIGHTNESS
@@ -360,84 +336,82 @@ class ImageAnalyzer:
 
         color_image = np.empty((camera.resolution[1], camera.resolution[0], 3), dtype=np.uint8)
 
+        images = []
         while self.running:
-
-            # USB Camera Stream Read
-            '''
-            s, color_image = cam.read()
-            if not s:
-                continue
-            '''
-
+            
             # PyCam Stream read
             camera.capture(color_image, format='bgr', use_video_port=True)
             
             # if frame buffer full, remove oldest
-            if frame_buffer.full():
-                frame_buffer.get()
+            if image_queue.full():
+                image_queue.get()
 
-            preprocessed_image = self.prepare_image_for_processing(color_image.copy())
-            frame_buffer.put(preprocessed_image)
-
-
-    def async_detection(self, ncs_worker):
-
-        while True:
-            ncs_worker.predict_async()
+            images.append(color_image.copy())
+            if len(images) == 2:
+                preprocessed_image = self.prepare_image_for_processing_double_image(images[0], images[1])
+                image_queue.put(preprocessed_image)
+                images = []
 
 
-    def detect_signals(self, results, frame_buffer, video_fps):
+    def detect_signals(self, results, image_queue):
         """
         Args:
             results: the queue to write results of the inference into.
             frame_buffer: the queue containing images from the cam_thread.
             video_fps: the speed at which the camera takes images.
         """
-
-        # Init infer thread
-        detection_thread = threading.Thread(
-            target=self.async_detection,
-            args=(NcsWorker(frame_buffer, results, video_fps),))
-        detection_thread.start()
-        detection_thread.join()  # wait for the thread to terminate
+        worker = NcsWorker(image_queue, results)
+        while self.running:
+            worker.predict_async()
+            #worker.predict_synchronous()
 
 
     def initialize(self):
 
-        video_fps = 15
-
-        mp.set_start_method('forkserver')
-        frame_buffer = mp.Queue(10)
-
+        try:
+            # this fails somethimes because the start method is already set
+            mp.set_start_method('forkserver')
+        except:
+            # that's ok :)
+            pass
+        
+        image_queue = mp.Queue(10)
+        
         # Start async signal detection
 
         # Activation the detection algorithm
-        p = mp.Process(target=self.detect_signals, args=(self.results, frame_buffer, video_fps), daemon=True)
+        p = mp.Process(target=self.detect_signals, args=(self.results, image_queue), daemon=True)
         p.start()
         processes.append(p)
 
         time.sleep(7)
 
         # Start filling frame buffer from camera
-        p = mp.Process(target=self.cam_thread, args=(frame_buffer,), daemon=True)
+        p = mp.Process(target=self.fake_cam_thread, args=(image_queue,), daemon=True)
         p.start()
         processes.append(p)
+
+        log = logging.getLogger()
+        log.info("ImageAnalyzer initialized.")
 
 
     def detect_signal(self) -> Signal:
 
         t = time.time()
-        while True:            
+        while True:
             try:
                 if self.results.qsize() > 0:
-                    result_set = self.results.get()
-                    if len(result_set) > 0:
-                        best_result = result_set[0]
-                        for r in result_set:
+                    results_set = self.results.get()
+                    if len(results_set) > 0:
+                        best_result = results_set[0]
+                        for r in results_set:
+                            print(LABELS[r.class_id], r.confidence, "%")
                             if r.confidence > best_result.confidence:
                                 best_result = r
-                        print('class: {}, confidence {}'.format(best_result.class_id, best_result.confidence))
-                        print('{:04f}, FPS: {}'.format(time.time() - t, 1/(time.time() - t)))
+                        
+                        print('CLASS: {}, CONFIDENCE {:.2f}%'.format(LABELS[best_result.class_id], best_result.confidence * 100))
+                        # FPS * 2 because we process 2 images at the same time!
+                        print('TIME: {:4f}s, FPS: {:4f}'.format(time.time() - t, 1/(time.time() - t)*2))
                         t = time.time()
                         if (self.search_high_signals):
                              return LABELS_TMS_INFO[best_result.class_id]
@@ -452,7 +426,12 @@ if __name__ == "__main__":
     '''
     Only for testing.
     '''
+    mp.set_start_method('forkserver')
     ia = ImageAnalyzer()
+
+
+    ia.search_high_signals = True
     ia.initialize()
+    time.sleep(5)
     while True:
         ia.detect_signal()
