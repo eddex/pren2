@@ -341,13 +341,12 @@ class ImageAnalyzer:
             
             # PyCam Stream read
             camera.capture(color_image, format='bgr', use_video_port=True)
-            
-            # if frame buffer full, remove oldest
-            if image_queue.full():
-                image_queue.get()
-
             images.append(color_image.copy())
+
             if len(images) == 2:
+                # if image queue full, remove oldest
+                if image_queue.full():
+                    image_queue.get()
                 preprocessed_image = self.prepare_image_for_processing_double_image(images[0], images[1])
                 image_queue.put(preprocessed_image)
                 images = []
