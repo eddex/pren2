@@ -81,7 +81,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define SlowVeloWurfel 100 // langsame Geschwindigkeit für Würfelaufnahme [mm/s]
+#define SlowVeloWurfel 150 // langsame Geschwindigkeit für Würfelaufnahme [mm/s]
 #define SlowVeloHaltesignal 150 // langsame Geschwindigkeit für Haltesignal [mm/s]
 #define MaxVelo 3000 // maximale Geschwindigkeit [mm/s]
 #define MaxNbrSignals 10 // maximale Anzahl Signale auf der Strecke
@@ -90,7 +90,7 @@
 #define MaxTrackLength 25000 // maximale Streckenlänge [mm]
 #define OffsetStartpos 1000 // Offset beim Retourfahren zur Startposition zur Verhinderung überfahren der Startposition [Ticks]
 #define OffsetHaltesignal 80 // Offset Halten beim Haltesignal [mm]
-#define OffsetWurfel 15 // Offset Vorfahren beim Würfel [mm]
+#define OffsetWurfel 20 // Offset Vorfahren beim Würfel [mm]
 
 //fsm State wurde von Default Task hierher verschoben, damit im sendDataToRaspy Task darauf zugegriffen werden kann
 enum fsm fsm_state; // create enum for statemachine task
@@ -462,6 +462,7 @@ void FSM_Task(void const * argument)
 			//Abbruchbedingung für Schwenken der weissen Flagge definieren...
 			//ToDo
 
+			/*
 			if (getFlagStructure().finalHSerkannt){ // finales Haltesignal erkannt
 				HAL_GPIO_WritePin(GPIOF, SHDN_TOF_TAFEL_Pin, GPIO_PIN_SET); // Tof Tafel enable
 				resetDistanceValue(); // Reset Distance Value for next measurement
@@ -482,8 +483,18 @@ void FSM_Task(void const * argument)
 				fsm_state = HALTESIGNAL_ANFAHREN;
 				PID_V_ClearError();
 				PID_H_ClearError();
-			}
+			}*/
 
+			HAL_GPIO_WritePin(GPIOF, SHDN_TOF_TAFEL_Pin, GPIO_PIN_SET); // Tof Tafel enable
+			resetDistanceValue(); // Reset Distance Value for next measurement
+			VL6180X_Init();
+			suspendSensorTask=0; //Enable Sensor Task
+			startTimeMeasurment();
+			fsm_state = HALTESIGNAL_ANFAHREN;
+			PID_V_ClearError();
+			PID_H_ClearError();
+
+			/*
 			#if WuerfelerkenneUndLaden_TEST
 				HAL_GPIO_WritePin(GPIOF, SHDN_TOF_TAFEL_Pin, GPIO_PIN_SET); // Tof Tafel enable
 				resetDistanceValue(); // Reset Distance Value for next measurement
@@ -493,7 +504,7 @@ void FSM_Task(void const * argument)
 				fsm_state = HALTESIGNAL_ANFAHREN;
 				PID_V_ClearError();
 				PID_H_ClearError();
-			#endif
+			#endif*/
 			break;
 
 		// Haltesignal mit TOF erkennen
@@ -764,7 +775,7 @@ void UART_Task(void const * argument)
 			UartSendBuffer[8] = 0;
 		#endif
 
-		//HAL_UART_Transmit(&huart1, UartSendBuffer, 1, 1000);
+		HAL_UART_Transmit(&huart1, UartSendBuffer, 1, 1000);
 
 		//*********Virtual Comport UART Debug**************
 		HAL_UART_Transmit(&huart2, UartSendBuffer, 1, 1000);

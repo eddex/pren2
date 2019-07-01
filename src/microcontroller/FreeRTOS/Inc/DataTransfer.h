@@ -17,7 +17,7 @@
 
 //Defines for FSM Debugging
 #define FSMTaskEnable 1								//0 --> Disabled / 1 --> Enabled
-#define WuerfelerkenneUndLaden_TEST 0				//0 --> Disabled / 1 --> Enabled
+#define WuerfelerkenneUndLaden_TEST 1				//0 --> Disabled / 1 --> Enabled
 //*******************************************************************
 
 
