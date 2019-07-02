@@ -87,7 +87,7 @@
 #define MaxNbrSignals 10 // maximale Anzahl Signale auf der Strecke
 #define MaxNbrRounds 3 // maximale Anzahl Runden
 #define MaxLoadAttempts 2 // maximale Anzahl Würfelladeversuche
-#define MaxTrackLength 25000 // maximale Streckenlänge [mm]
+#define MaxTrackLength 24000 // maximale Streckenlänge [mm]
 #define OffsetStartpos 1000 // Offset beim Retourfahren zur Startposition zur Verhinderung überfahren der Startposition [Ticks]
 #define OffsetHaltesignal 80 // Offset Halten beim Haltesignal [mm]
 #define OffsetWurfel 20 // Offset Vorfahren beim Würfel [mm]
@@ -445,7 +445,7 @@ void FSM_Task(void const * argument)
 
 		// Abbremsen zur Haltesignalerkennung
 		case BREMSEN:
-			speed-=10;
+			speed-=20;
 			if (speed <= SlowVeloHaltesignal){
 				posFinalesHaltesignal = Quad_V_GetPos(); // Position merken
 				fsm_state = FINALES_HALTESIGNAL;
@@ -550,11 +550,10 @@ void FSM_Task(void const * argument)
 
 		// Warten bis Startsignal von Raspi zurückgenommen wird
 		case STOP:
-			/*
 			if (!(getFlagStructure().startSignal)){	//!getStartSignal() Was meinst du mit dem Andi?
 				fsm_state = STARTUP;
-			}*/
-			fsm_state = fsm_state;
+			}
+			//fsm_state = fsm_state;
 
 			break;
 		}
