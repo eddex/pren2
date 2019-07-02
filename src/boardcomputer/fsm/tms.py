@@ -30,16 +30,17 @@ sys.path.append(BaseConfig.APP_IMPORT_PATH)
 class MCFSMStates(Enum):
     STARTUP = 0
     WURFEL_ERKENNEN = 1
-    SERVO_RUNTER = 2
-    SERVO_RAUF = 3
-    WURFEL_KONTROLLE = 4
-    STARTPOSITION = 5
-    SCHNELLFAHRT = 6
-    BREMSEN = 7
-    FINALES_HALTESIGNAL = 8
-    HALTESIGNAL_ANFART = 9
-    HALTESIGNAL_STOPPEN = 10
-    STOP = 11
+    WUERFEL_VORFAHREN = 2
+    SERVO_RUNTER = 3
+    SERVO_RAUF = 4
+    WURFEL_KONTROLLE = 5
+    STARTPOSITION = 6
+    SCHNELLFAHRT = 7
+    BREMSEN = 8
+    FINALES_HALTESIGNAL = 9
+    HALTESIGNAL_ANFART = 10
+    HALTESIGNAL_STOPPEN = 11
+    STOP = 12
 
 class SoundOutputs(Enum):
     ZERO = 0
@@ -53,6 +54,9 @@ class SoundOutputs(Enum):
     EIGHT = 8
     NINE = 9
     INIT_TMS = 101
+
+    def __init__(self, sound_id: int):
+        self.soundId = sound_id
 
 
 class TrainManagementSystemStates(Enum):
@@ -71,8 +75,7 @@ class TrainManagementSystem(FSMStateStatusListenerInterface):
         self._sound_player = None
         self._play = None
         self.ticp_handler = None
-        self._image_amalyzer = ImageAnalyzer()
-        self._image_amalyzer.initialize()
+        self._image_amalyzer = None
 
         self._init_logging_local()
 
@@ -84,27 +87,32 @@ class TrainManagementSystem(FSMStateStatusListenerInterface):
             except:
                 self.log.info("Unable to connect to Webservice. Logging local instead")
 
+        self._init_sound()
         self._init_uart()
 
         if self.config.INIT_CAMERA_IN_TMS:
             self._camera = None
             self._init_camera()
 
-
+        print("init ImageAnalyzer")
         self._init_image_analyzer()
+        print("done")
 
         self._current_mcu_fsm = MCFSMStates(0)
         self.round_counter = 0
         self.rounds_to_drive = self.config.RUN_NUMBEROFROUNDS
         self.info_signals = []
         self.running = True
+        self.detect_signals = False
 
     def run(self):
 
         self._initialize()
-
+        #self._signal_recognition()
         while self.running or self._current_mcu_fsm != MCFSMStates.STOP:
-            pass
+            if self.detect_signals == True:
+                self._signal_recognition()
+        self._image_amalyzer.stop_everything()
 
     def _initialize(self):
         self.log.info("Train Inizialized")
@@ -154,11 +162,13 @@ class TrainManagementSystem(FSMStateStatusListenerInterface):
                                                         stop_signal=False)
             self.ticp_handler.write_message(msg)
 
+        self.detect_signals = False
         self._searching_stop_signal()
 
     def _searching_stop_signal(self):
 
         self.log.info("Start searching for stop signal")
+        print("_searching_stop_signal")
         self._image_amalyzer.search_high_signals = False
         # Returns the Stop Signal which was detected most
         info_signal = Counter(self.info_signals).most_common()[0][0]
@@ -193,10 +203,13 @@ class TrainManagementSystem(FSMStateStatusListenerInterface):
         self.running = False
 
     def notify_fsm_state_change(self, newFSM: int):
+        self.log.info("FSM State changed")
         self._current_mcu_fsm = MCFSMStates(newFSM)
 
         if self._current_mcu_fsm is MCFSMStates.SCHNELLFAHRT:
-            self._signal_recognition()
+            self.detect_signals = True
+        if self._current_mcu_fsm is MCFSMStates.BREMSEN:
+            self.round_counter = self.rounds_to_drive
 
     def _upload_image(self, image) -> None:
 
@@ -277,8 +290,8 @@ class TrainManagementSystem(FSMStateStatusListenerInterface):
 
         self._sound_player = pygame.mixer
         self._sound_player.init()
-        self._sound_playermusic.set_volume(1.0)
-        self._sound_playerset_reserved(1)
+        self._sound_player.music.set_volume(1.0)
+        self._sound_player.set_reserved(1)
 
         self.log.info("Setting PCM to :" + self.config.PCM_SETTING)
         os.system('amixer set PCM ' + self.config.PCM_SETTING)
@@ -311,14 +324,17 @@ if __name__ == "__main__":
 
     if environment == 'dev':
         tms = TrainManagementSystem(DevelopmentConfig())
+        print("sending run()")
         tms.run()
 
     elif environment == 'test':
         tms = TrainManagementSystem(TestConfig())
+        print("sending run()")
         tms.run()
 
     elif environment == 'prod':
         tms = TrainManagementSystem(ProductionConfig())
+        print("sending run()")
         tms.run()
 
     else:

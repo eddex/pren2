@@ -28,7 +28,7 @@ NOTSET = 0
 class SoundConfig:
 
     HUMAN_OUTPUT_ENABLE = True
-    HUMAN_SOUNDFILE_BASEPATH = './soundfiles/'
+    HUMAN_SOUNDFILE_BASEPATH = './fsm/soundfiles/'
     HUMAN_SOUNDFILE_PATHS = {
         0: '0.mp3',
         1: '1.mp3',
@@ -107,7 +107,7 @@ class DevelopmentConfig(BaseConfig):
     LOG_ENABLE_WEB_LOGGING = True
     LOG_ENABLE_WEB_PICTURE_LOGGING = True
 
-    TICP_ENABLE_DEBUG = True
+    TICP_ENABLE_DEBUG = False
 
 
 class TestConfig(BaseConfig):
