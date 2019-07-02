@@ -85,7 +85,7 @@
 #define SlowVeloHaltesignal 150 // langsame Geschwindigkeit für Haltesignal [mm/s]
 #define MaxVelo 3000 // maximale Geschwindigkeit [mm/s]
 #define MaxNbrSignals 10 // maximale Anzahl Signale auf der Strecke
-#define MaxNbrRounds 2 // maximale Anzahl Runden
+#define MaxNbrRounds 3 // maximale Anzahl Runden
 #define MaxLoadAttempts 2 // maximale Anzahl Würfelladeversuche
 #define MaxTrackLength 25000 // maximale Streckenlänge [mm]
 #define OffsetStartpos 1000 // Offset beim Retourfahren zur Startposition zur Verhinderung überfahren der Startposition [Ticks]
@@ -462,8 +462,7 @@ void FSM_Task(void const * argument)
 			//Abbruchbedingung für Schwenken der weissen Flagge definieren...
 			//ToDo
 
-			/*
-			if (getFlagStructure().finalHSerkannt){ // finales Haltesignal erkannt
+			if ((getFlagStructure().finalHSerkannt) /*|| (getFlagStructure().roundCounter<MaxNbrRounds)*/){ // finales Haltesignal erkannt oder Raspberry abgekratzt
 				HAL_GPIO_WritePin(GPIOF, SHDN_TOF_TAFEL_Pin, GPIO_PIN_SET); // Tof Tafel enable
 				resetDistanceValue(); // Reset Distance Value for next measurement
 				VL6180X_Init();
@@ -474,6 +473,7 @@ void FSM_Task(void const * argument)
 				PID_H_ClearError();
 			}
 			// falls eine ganze Strecke abgefahren wurde und kein Haltesignal von Raspberry erhalten wurde
+			/*
 			else if	((Quad_V_GetPos()-posFinalesHaltesignal)>=(((MaxTrackLength/2) * iGetriebe * TicksPerRev) / (Wirkumfang))){
 				HAL_GPIO_WritePin(GPIOF, SHDN_TOF_TAFEL_Pin, GPIO_PIN_SET); // Tof Tafel enable
 				resetDistanceValue(); // Reset Distance Value for next measurement
@@ -485,6 +485,7 @@ void FSM_Task(void const * argument)
 				PID_H_ClearError();
 			}*/
 
+			/*
 			HAL_GPIO_WritePin(GPIOF, SHDN_TOF_TAFEL_Pin, GPIO_PIN_SET); // Tof Tafel enable
 			resetDistanceValue(); // Reset Distance Value for next measurement
 			VL6180X_Init();
@@ -493,8 +494,8 @@ void FSM_Task(void const * argument)
 			fsm_state = HALTESIGNAL_ANFAHREN;
 			PID_V_ClearError();
 			PID_H_ClearError();
+			*/
 
-			/*
 			#if WuerfelerkenneUndLaden_TEST
 				HAL_GPIO_WritePin(GPIOF, SHDN_TOF_TAFEL_Pin, GPIO_PIN_SET); // Tof Tafel enable
 				resetDistanceValue(); // Reset Distance Value for next measurement
@@ -504,7 +505,7 @@ void FSM_Task(void const * argument)
 				fsm_state = HALTESIGNAL_ANFAHREN;
 				PID_V_ClearError();
 				PID_H_ClearError();
-			#endif*/
+			#endif
 			break;
 
 		// Haltesignal mit TOF erkennen
@@ -515,26 +516,15 @@ void FSM_Task(void const * argument)
 
 			if(taskState==TASK_OK){
 				HAL_GPIO_WritePin(GPIOF, SHDN_TOF_TAFEL_Pin, GPIO_PIN_RESET); // Tof Tafel disable
-
-				/*
-				#if WuerfelerkenneUndLaden_TEST
-					Motor_Break();
-					HAL_GPIO_WritePin(HB_Sleep_GPIO_Port, HB_Sleep_Pin, GPIO_PIN_RESET); // disable H-Bridge
-					while(1);
-				#endif*/
-
 				distHaltesignal=(((getDistanceValue()-OffsetHaltesignal) * iGetriebe * TicksPerRev) / (Wirkumfang)); // Umrechnung Millimeter in Ticks
 				posHaltesignal=Quad_V_GetPos()+distHaltesignal; // Speicherung Position Haltesignal
 				fsm_state = HALTESIGNAL_STOPPEN;
 			}
 			else if(taskState==TASK_TIME_OVERFLOW){
 				//Was machen wir wenn das Haltesignal nicht erkannt wird???
-				#if WuerfelerkenneUndLaden_TEST
-					Motor_V_Break();
-					Motor_H_Break();
-					HAL_GPIO_WritePin(HB_Sleep_GPIO_Port, HB_Sleep_Pin, GPIO_PIN_RESET);
-					while(1);
-				#endif
+				HAL_GPIO_WritePin(GPIOF, SHDN_TOF_TAFEL_Pin, GPIO_PIN_RESET); // Tof Tafel disable
+				posHaltesignal=Quad_V_GetPos(); // Speicherung Position Haltesignal
+				fsm_state = HALTESIGNAL_STOPPEN;
 			}
 			else{
 				//Task is Running
