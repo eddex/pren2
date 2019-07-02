@@ -38,8 +38,8 @@ taskState_t tof_erkennen(uint8_t distance){
 	storeTimeMeasurement = getTimeMeasurement();
 
 
-	//If time measurement exeeded 15s
-	if(storeTimeMeasurement>=1499){
+	//If time measurement exeeded 30s
+	if(storeTimeMeasurement>=2999){
 		Motor_V_Break();
 		Motor_H_Break();
 		return TASK_TIME_OVERFLOW;
