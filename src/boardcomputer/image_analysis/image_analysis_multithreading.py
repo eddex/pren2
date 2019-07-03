@@ -395,7 +395,7 @@ class ImageAnalyzer:
 
         log = logging.getLogger()
         log.info("ImageAnalyzer initialized.")
-
+        
 
     def detect_signal(self) -> Signal:
 
@@ -425,8 +425,7 @@ class ImageAnalyzer:
 
 
     def stop_everything(self):
-        for p in self.processes:
-            p.stop()
+        self.running = False
 
 
 if __name__ == "__main__":
