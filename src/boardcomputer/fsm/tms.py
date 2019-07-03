@@ -166,35 +166,43 @@ class TrainManagementSystem(FSMStateStatusListenerInterface):
         self._searching_stop_signal()
 
     def _searching_stop_signal(self):
+        
+        if len(self.info_signals) == 0:
+            msg = TICPMessageAllCommandData.from_values(start_signal=True, 
+                                                        round_counter=3,
+                                                        stop_signal=True)
+            for _ in range(0,10):
+                self.ticp_handler.write_message(msg)
+        
+        else:
+            self.log.info("Start searching for stop signal")
+            print("_searching_stop_signal")
+            self._image_amalyzer.search_high_signals = False
+            # Returns the Stop Signal which was detected most
+            info_signal = Counter(self.info_signals).most_common()[0][0]
 
-        self.log.info("Start searching for stop signal")
-        print("_searching_stop_signal")
-        self._image_amalyzer.search_high_signals = False
-        # Returns the Stop Signal which was detected most
-        info_signal = Counter(self.info_signals).most_common()[0][0]
+            self.log.info("Stopping as soon as {} Signal is detected".format(info_signal.number))
 
-        self.log.info("Stopping as soon as {} Signal is detected".format(info_signal.number))
+            stop_signal_detected = False
 
-        stop_signal_detected = False
+            while not stop_signal_detected:
 
-        while not stop_signal_detected:
+                signal = self._image_amalyzer.detect_signal()
 
-            signal = self._image_amalyzer.detect_signal()
+                if signal is None:
+                    self.log.info("No Signal detected")
 
-            if signal is None:
-                self.log.info("No Signal detected")
+                elif signal.signal_type is SignalType.STOP:
 
-            elif signal.signal_type is SignalType.STOP:
+                    if signal.number is info_signal.number:
+                        stop_signal_detected = True
 
-                if signal.number is info_signal.number:
-                    stop_signal_detected = True
+            msg = TICPMessageAllCommandData.from_values(start_signal=True,
+                                                        round_counter=self.round_counter,
+                                                        stop_signal=True)
 
-        msg = TICPMessageAllCommandData.from_values(start_signal=True,
-                                                    round_counter=self.round_counter,
-                                                    stop_signal=True)
-
-        for _ in range(0,10):
-            self.ticp_handler.write_message(msg)
+            for _ in range(0,10):
+                self.ticp_handler.write_message(msg)
 
         self.shutdown()
 
