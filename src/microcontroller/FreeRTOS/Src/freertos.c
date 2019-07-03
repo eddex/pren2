@@ -430,6 +430,7 @@ void FSM_Task(void const * argument)
 			PID_H_Velo(speed);
 
 			// Anzahl Runden erreicht
+			/*
 			if (getFlagStructure().roundCounter >= MaxNbrRounds){
 				fsm_state = BREMSEN;
 			}
@@ -438,7 +439,8 @@ void FSM_Task(void const * argument)
 				fsm_state = BREMSEN;
 			}
 			// Gemessene Strecke grösser als maximale Streckenlänge
-			else if ((Quad_V_GetPos()-posStart)>=((MaxTrackLength * iGetriebe * TicksPerRev) / (Wirkumfang))){
+			else*/
+			if ((Quad_V_GetPos()-posStart)>=((MaxTrackLength * iGetriebe * TicksPerRev) / (Wirkumfang))){
 				fsm_state = BREMSEN;
 			}
 			break;
