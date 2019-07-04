@@ -226,6 +226,7 @@ class ImageAnalyzer:
         self.search_high_signals = True  # set to false to search for low signals
         self.input_size = 416
         self.results = mp.Queue()
+        self.processes = []
 
 
     def prepare_image_for_processing(self, color_image):
@@ -274,7 +275,8 @@ class ImageAnalyzer:
             # combine the 2 lower halfs of the image to one image
             canvas[:208, :416, :] = color_image_1[208:416, :416, :]
             canvas[208:416, :416, :] = color_image_2[208:416, :416, :]
-
+        #cv2.imwrite("/home/pi/boardcomputer/image_analysis/prepared-image{}.jpg".format(time.time()), img=canvas)
+        #time.sleep(1)
         prepimg = canvas
         prepimg = prepimg[np.newaxis, :, :, :]     # Batch size axis add
         prepimg = prepimg.transpose((0, 3, 1, 2))  # NHWC to NCHW
@@ -324,20 +326,21 @@ class ImageAnalyzer:
         # initialise PiCamera
         base_config = BaseConfig()
         camera = PiCamera()
-        camera.resolution = base_config.CAMERA_RESOLUTION
-        camera.brightness = base_config.CAMERA_BRIGHTNESS
-        camera.framerate = base_config.CAMERA_FRAMERATE
-        camera.shutter_speed = base_config.CAMERA_SHUTTERSPEED
-        camera.exposure_mode = base_config.CAMERA_EXPOSUREMODE
-        camera.rotation = base_config.CAMERA_ROTATION
-        camera.iso = base_config.CAMERA_ISO
+        camera.exposure_mode = 'sports'
+        camera.exposure_compensation = -10
+        camera.resolution = (416, 416)
+        camera.brightness = 55
+        camera.framerate = 30
+        camera.shutter_speed = 400
+        camera.rotation = 0
+        camera.iso = 1200
 
         time.sleep(2)
 
-        color_image = np.empty((camera.resolution[1], camera.resolution[0], 3), dtype=np.uint8)
-
         images = []
         while self.running:
+            
+            color_image = np.empty((camera.resolution[1], camera.resolution[0], 3), dtype=np.uint8)
             
             # PyCam Stream read
             camera.capture(color_image, format='bgr', use_video_port=True)
@@ -381,18 +384,18 @@ class ImageAnalyzer:
         # Activation the detection algorithm
         p = mp.Process(target=self.detect_signals, args=(self.results, image_queue), daemon=True)
         p.start()
-        processes.append(p)
+        self.processes.append(p)
 
         time.sleep(7)
 
         # Start filling frame buffer from camera
-        p = mp.Process(target=self.fake_cam_thread, args=(image_queue,), daemon=True)
+        p = mp.Process(target=self.cam_thread, args=(image_queue,), daemon=True)
         p.start()
-        processes.append(p)
+        self.processes.append(p)
 
         log = logging.getLogger()
         log.info("ImageAnalyzer initialized.")
-
+        
 
     def detect_signal(self) -> Signal:
 
@@ -419,6 +422,10 @@ class ImageAnalyzer:
             except KeyboardInterrupt:
                 self.running = False
                 sys.exit(0)
+
+
+    def stop_everything(self):
+        self.running = False
 
 
 if __name__ == "__main__":

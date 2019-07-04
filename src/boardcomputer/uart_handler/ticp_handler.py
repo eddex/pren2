@@ -151,12 +151,10 @@ class TICPHandler(FSMStateStatusNotifier):
                         self.notify_fsm_change(currentFSM)
 
                 except NotImplementedError:
+                    print("TICP Handler Message Handle error")
                     # ToDo Handle if Message was not decoded right
-                    pass
-            else:
-                logging.debug(
-                    "TICPHandler - read_thread: Received invalid/empty message within the "
-                    "timeout-> drop")
+            #else:
+                #logging.debug("TICPHandler - read_thread: Received invalid/empty message within the "                     "timeout-> drop")
 
     def write_thread(self):
         while not self._stopped:
